@@ -49,7 +49,7 @@
       $('#storeManager').value = state.meta.manager || '';
       $('#areaManager').value = state.meta.areaManager || '';
       renderCrumbs();
- if ($('#auditorFeedback')) { $('#auditorFeedback').value = state.meta.auditorFeedback || ''; if ($('#afCounter')) $('#afCounter').textContent = ($('#auditorFeedback').value.length) + ' / 300'; }
+ if ($('#auditorFeedback')) { $('#auditorFeedback').value = state.meta.auditorFeedback || ''; if ($('#afCounter')) $('#afCounter').textContent = ($('#auditorFeedback').value.length) + ' / 1000'; }
       if (Object.keys(state.sectors || {}).length === 0) {
         var pane = $('#pane'); pane.innerHTML = '';
         pane.appendChild(el('div', { class: 'hint' }, ['Questions could not be loaded. Click ', el('b', {}, ['Load Question Set (.json)']), ' to import manually.']));
@@ -1167,7 +1167,7 @@ pdfHTML += (s.failed ? '' : (s.penalty ? '<div style=\"font-size:11px;color:#924
       // Clear meta fields 
       state.meta = { store: "", date: "", auditor: "", manager: "", areaManager: "", auditorFeedback: "" };
       var af = document.getElementById('auditorFeedback'); if (af) af.value = '';
-      var afc = document.getElementById('afCounter'); if (afc) afc.textContent = '0 / 300';
+      var afc = document.getElementById('afCounter'); if (afc) afc.textContent = '0 / 1000';
       // Clear answer, action and photos for every question 
       for (const sid in state.sectors) {
         const sec = state.sectors[sid];
@@ -1591,7 +1591,7 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
       afInput.addEventListener('input', function() {
         state.meta.auditorFeedback = this.value;
         var afc = document.getElementById('afCounter');
-        if (afc) afc.textContent = this.value.length + ' / 300';
+        if (afc) afc.textContent = this.value.length + ' / 1000';
         quickSave();
       });
     }
