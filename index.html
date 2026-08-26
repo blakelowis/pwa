@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5,user-scalable=yes" name="viewport" />
+  <script>
+  (function(){
+    try{
+      var p = location.pathname || '';
+      if(p && !p.endsWith('/') && !/\.[A-Za-z0-9]+$/.test(p)) {
+        location.replace(p + '/' + (location.search || '') + (location.hash || ''));
+      }
+    }catch(e){}
+  })();
+  </script>
+  <title>Birds Retail Audit</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#14532d" />
+  <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMDI4NGM3Ii8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMGVhNWU5Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PGNpcmNsZSBjeD0iNjQiIGN5PSI2NCIgcj0iNjAiIGZpbGw9InVybCgjZykiLz48cGF0aCBkPSJNMzggNzBjMTItMTYgMjQtMjQgNDYtMjAgMCAwLTEwIDEwLTE4IDE4LTYgNiAzIDE5IDEzIDEyIDAgMCAxMC0xMCAxNi04IDAgMC03IDE2LTcgMjQgMCAwLTEzIDQtMjItMy04LTctMTQtMTgtMTAtMzItOCA3LTE4IDYtMTggNnMtMyAxMiAwIDEzeiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==" />
+  <link rel="stylesheet" href="./css/audit.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+  <div id="errorBanner" role="alert" style="display:none;background:#fee2e2;color:#991b1b;border-bottom:1px solid #fecaca;padding:8px 16px;font-weight:600"></div>
+  <header>
+    <h1>
+      <span class="brand-chip"><img alt="Logo" id="hdrLogo" /></span>
+      Birds Retail Audit
+    </h1>
+    <div class="actions">
+      <span aria-live="polite" class="pill" id="saveStatus">Saved</span>
+      <label class="btn ghost" style="cursor:pointer">
+        <input accept="image/*" hidden="" id="logoPicker" type="file" />
+        Brand logo (watermark)
+      </label>
+      <button class="btn ghost build-only" id="saveTemplateBtn">Save JSON</button>
+      <label class="btn ghost" style="cursor:pointer">
+        <input accept="application/json" hidden="" id="seedPicker" type="file" />
+        Load Question Set (.json)
+      </label>
+      <button class="btn ghost" id="saveBtn">Save</button>
+      <button class="btn ghost" id="clearBtn">Clear</button>
+      <button class="btn ghost build-only" id="btnClearCache">Clear cache</button>
+      <button class="btn green" id="exportBtn">Export HTML (autosave)</button>
+      <button class="btn green" id="exportFullCsvBtn" type="button">Export Full CSV</button>
+      <button class="btn green" id="exportAPCsvBtn" type="button">Export AP CSV</button>
+      <button class="btn green" id="exportAPJsonBtn" type="button">Export AP JSON</button>
+      <button class="btn green" id="exportPdfBtn">Export PDF (print)</button>
+      <button class="btn green" id="btnDownloadEvidence" type="button">Download Photos</button>
+      <button class="btn green" id="btnExportAuditZip" type="button">Save Audit ZIP</button>
+    </div>
+    <label class="btn ghost" style="cursor:pointer">
+      <input hidden="" id="modeToggle" type="checkbox" />
+      <span id="modeLabel">Audit mode</span>
+    </label>
+  </header>
+  <div class="wrap">
+    <div class="diag" id="diag"></div>
+    <section class="card" id="meta">
+      <div class="grid">
+        <label>Store Name<input id="storeName" placeholder="e.g., Birds Bakery, Derby" type="text" /></label>
+        <label>Auditor<input id="auditorName" placeholder="Your name" type="text" /></label>
+        <label>Store Manager<input id="storeManager" placeholder="e.g., Jane Smith" type="text" /></label>
+        <label>Area Manager<select id="areaManager">
+            <option value="">Select an area manager</option>
+            <option>Tom Henson</option>
+            <option>Craig White</option>
+            <option>Suzanne Green</option>
+            <option>Paul Reeves</option>
+            <option>Katie Cartwright</option>
+            <option>Mel Hughes</option>
+          </select></label>
+      </div>
+      <div class="grid" style="margin-top:10px;">
+        <label>Date<input id="auditDate" type="date" /></label>
+      </div>
+      <div class="hint" style="margin-top:8px">Questions are loaded automatically. Use <b>Load Question Set (.json)</b> to override with a newer version.</div>
+      <div class="grid" style="margin-top:14px;">
+        <label style="grid-column: 1 / -1;">
+          <div style="font-weight:700;color:#14532d;margin-bottom:6px;">Audit Summary</div>
+          <textarea id="auditorFeedback" maxlength="300" placeholder="Overall feedback, key observations, priority actions... (max 300 characters - Optional)" style="width:100%;min-height:110px;padding:12px;border-radius:12px;"></textarea>
+          <div id="afCounter" style="margin-top:6px;color:#667085;">0 / 300</div>
+        </label>
+      </div>
+    </section>
+    <section class="card">
+      <div class="scorecard">
+        <svg aria-hidden="true" class="donut" viewbox="0 0 42 42">
+          <circle cx="21" cy="21" fill="transparent" r="18" stroke="var(--ring)" stroke-width="6"></circle>
+          <circle cx="21" cy="21" fill="transparent" id="donutVal" r="18" stroke="var(--brand)" stroke-dasharray="0 113" stroke-linecap="round" stroke-width="6" transform="rotate(-90 21 21)"></circle>
+          <text dominant-baseline="middle" fill="var(--ink)" font-size="8" font-weight="800" id="donutText" text-anchor="middle" x="50%" y="50%">0%</text>
+        </svg>
+        <div class="stat">
+          <div class="hint">Answered (Pass/Fail)</div><b id="answered">0</b>
+        </div>
+        <div class="stat">
+          <div class="hint">Open actions</div><b id="openActions">0</b>
+        </div>
+        <div class="stat">
+          <div class="hint">Overall score</div><b id="scorePct">0%</b>
+        </div>
+      </div>
+    </section>
+    <div class="crumbs" id="crumbs"></div>
+    <section class="card" id="pane">
+      <div class="hint">Questions could not be loaded. Click <b>Load Question Set (.json)</b> to import manually.</div>
+    </section>
+    <section aria-label="Action Plan" class="card" id="actionPanel">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin:0;">Action Plan</h3>
+        <span class="pill" id="apCount">0 items</span>
+        <div class="ap-filters" style="margin-left:auto;">
+          <label>Status
+            <select id="apFilterStatus">
+              <option value="all">All</option>
+              <option selected="" value="open">Open</option>
+              <option value="closed">Closed</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <table aria-describedby="apCount" id="apTable">
+        <thead>
+          <tr>
+            <th style="width:16%">Sector / Category</th>
+            <th style="width:22%">Description</th>
+            <th style="width:12%">Person responsible</th>
+            <th style="width:18%">Action needed</th>
+            <th style="width:7%">Status</th>
+            <th style="width:7%">Closed on</th>
+            <th style="width:6%">Critical</th>
+            <th style="width:6%">Photo</th>
+          </tr>
+        </thead>
+        <tbody id="apBody"></tbody>
+      </table>
+    </section>
+    <footer style="margin:12px 0 28px">
+      <div class="hint" id="wmStatus">No watermark set</div>
+    </footer>
+  </div>
+  <div id="saveToast" style="position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:rgba(20,20,20,.85);color:#fff;padding:10px 14px;border-radius:999px;font-weight:800;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:9999">Saved</div>
+  <script src="./js/audit.js"></script>
+  <!-- Mobile bottom action bar -->
+  <div aria-label="Quick actions" class="mbar" role="region">
+    <button class="btn ghost" onclick="saveWorkingCopy()" type="button">Save</button>
+    <button class="btn ghost" id="btnOpenDrawer" type="button">Sectors</button>
+    <button class="btn green" onclick="exportPDF()" type="button">Export PDF</button>
+    <button class="btn green" onclick="exportAuditZIP()" type="button">Save Audit ZIP</button>
+    <button class="btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" type="button">Top</button>
+  </div>
+  <div aria-live="polite" id="floatingScore" style="position:fixed;right:12px;bottom:92px;z-index:60;background:rgba(17,24,39,.92);color:#fff;border-radius:999px;padding:10px 14px;font-weight:800;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.22);display:none">Score: 0% &bull; Actions: 0</div>
+  <!-- Sector Bottom Drawer -->
+  <div id="sectorDrawer" style="position:fixed;left:0;right:0;bottom:-70vh;height:60vh;background:var(--card);border-top:1px solid var(--border);box-shadow:0 -12px 32px rgba(0,0,0,.18);border-top-left-radius:18px;border-top-right-radius:18px;z-index:70;transition:bottom .25s ease-out;padding:12px 14px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <b style="font-size:16px">Jump to sector</b>
+      <button class="btn small" id="btnCloseDrawer" style="margin-left:auto">Close</button>
+    </div>
+    <div id="sectorDrawerList" style="display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))"></div>
+  </div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js').then(function(reg) {
+          console.log('[PWA] Service worker registered', reg.scope);
+        }).catch(function(err) {
+          console.warn('[PWA] SW registration failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
