@@ -1,0 +1,2251 @@
+﻿// ===== Script block 3 =====
+// ===== Utils & diagnostics ===== 
+    function exportJSON() { var data = JSON.stringify(state.sectors, null, 2); var blob = new Blob([data], { type: 'application/json' }); var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'template.json'; a.click(); }
+    var BANNER = document.getElementById('errorBanner');
+    function showBanner(msg) { BANNER.textContent = msg; BANNER.style.display = 'block'; }
+    window.addEventListener('error', function (ev) {
+      var msg = 'Script error: ' + (ev && (ev.message
+        || (ev.error && ev.error.message))
+        || 'Unknown'); showBanner(msg);
+    });
+    var diag = document.getElementById('diag');
+    function uid() { return Math.random().toString(36).slice(2, 9); }
+    window.$ = window.jQuery = function (s) { return document.querySelector(s); }
+    function el(t, a, c) { var n = document.createElement(t); a = a || {}; c = c == null ? [] : Array.isArray(c) ? c : [c]; for (var k in a) { if (k === 'class') { n.className = a[k]; } else { n.setAttribute(k, a[k]); } } c.forEach(function (ch) { if (ch == null) return; n.append(ch instanceof Node ? ch : document.createTextNode(ch)); }); return n; }
+    function esc(s) { var x = String(s == null ? '' : s); return x.replace(/&/g, '&amp;').replace(/\</g, '&lt;').replace(/\>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
+    // ===== Watermark ===== 
+    function loadWatermark() { try { return localStorage.getItem('audit_watermark_v2') || null; } catch (e) { return null; } }
+    function applyWatermarkToPage() {
+      document.body.classList.toggle('has-watermark', !!state.watermark);
+      var note = $('#wmStatus');
+      if (state.watermark) {
+        note.textContent = 'Watermark set (embedded in export & print)';
+        var style = document.getElementById('wm-style') || document.createElement('style');
+        style.id = 'wm-style';
+        style.textContent = "";
+        document.head.appendChild(style);
+      } else {
+        note.textContent = 'No watermark set';
+        var s = document.getElementById('wm-style'); if (s) s.remove();
+      }
+    }
+    // ===== Embedded logo (placeholder) ===== 
+    var EMBEDDED_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+    document.getElementById('hdrLogo').src = EMBEDDED_LOGO;
+    // ===== State ===== 
+    var WORK_KEY_BASE = 'audit_app_v2_modular';
+    var state = { meta: { store: '', date: '', auditor: '', manager: '', areaManager: '', auditorFeedback: '' }, watermark: loadWatermark(), sectors: {} };
+
+    // ===== Embedded Question Bank (AuditQuestions.json) =====
+    var EMBEDDED_QUESTIONS = {"food":{"title":"Food","categories":[{"id":"5lgh0is","name":"Hazard Analysis and Critical Control Points (HACCP)","questions":[{"id":"muhmz1y","text":"Can staff give an example of what a critical control point (CCP) is? (ask staff members)","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"wfmyeax","text":"Are staff fully aware of the corrective actions to be taken as stated in the HACCP if a fault occurs? (ask staff members)","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"85d16f5","name":"Deliveries & Goods In","questions":[{"id":"90afac0","text":"Any current issues with goods being delivered","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"61b2a9d","text":"Are products rejected if damaged, out of date, or delivered at incorrect temperature?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"a81e766","text":"Are chemicals delivered and stored separately from food products?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"fq57r5w","name":"Storage / Cold Storage","questions":[{"id":"69qt3z6","text":"Is the meat divider in use?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"iby6x4p","text":"Is prep area stock rotated correctly and not out of date (include sauces/meats/drinks)?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"7qeyvxt","text":"Are all fridge door seals clean (inside fold) and intact?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"nv9lu5d","text":"Calibrate the probe:\nIs the probe within 0.5\u00b0C of the test cap? If not contact head office immediately.","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"meso47z","text":"Is food always covered and labelled when storing overnight? Use by date.","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"rw1hf8z","text":"Is food correctly loaded in the fridge i.e. raw at the bottom, cooked at the top?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"c022yl8","text":"Is the shop probe calibrated every 3 months using test caps and records up to date?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"6v5oeli","text":"Measure the temperatures of all of the below. Are all fridges below 8\u00b0C and all freezers below -18\u00b0C?\nIf no, contact maintenance and head office must be informed immediately.","weight":10,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"o505eq9","text":"Measure the refrigerated temperature of:savoury product and cream product\u00a0Are both below 8\u00b0C? If not contact head office immediately.","weight":10,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"nth91gw","text":"Are daily temperature sheets completed?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"8qa98vq","text":"Are all maintenance issues regarding refrigeration logged in shire","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"infrared_probe_results","name":"Infrared probe results","questions":[{"id":"ipr1","text":"Cream Chiller: Left Back","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr2","text":"Cream Chiller Left Front","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr3","text":"Cream Chiller Front Centre","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr4","text":"Cream Chiller Right Front","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr5","text":"Cream Chiller Right Back","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr6","text":"Cream Chiller Centre Back","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr7","text":"Savoury Chiller Left Back","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr8","text":"Savoury Left Front","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr9","text":"Savoury Centre Front","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr10","text":"Savoury Chiller Front Right","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr11","text":"Savoury Chiller Back Right","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ipr12","text":"Savoury Chiller Back Centre","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"3l98e1r","name":"Storage / Ambient Storage","questions":[{"id":"i99421p","text":"Are all staff aware of the 4-hour rule for sandwiches? Is it in practice if required (ask staff members)","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"qskgd9e","text":"Are all items stored off the floor?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"tk2206c","name":"Bake Off / Hot Product Holding","questions":[{"id":"owlme51","text":"Are all staff aware of the two hour rule for bake off? (ask staff members)","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"69gm0el","text":"Ask a staff member, what is the minimum product temperature for holding hot sausage and hot roast pork? Did they answer above 63\u00b0C?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"bqn5cmu","text":"Ask a staff member, what minimum temperature should products be baked to? Did they answer above 75\u00b0C?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"hik6b6s","text":"Check the temperature of a product leaving the oven. Is it in line with the temperatures above?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"r3sfxde","text":"Is the bake-off temperature being recorded by the shop and is this up to date?","weight":10,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"new_sample_bakeoff","name":"Sample Bake off product","questions":[{"id":"sample_1","text":"What product has been taken to sample?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"sample_2","text":"When was product cooked and how long for?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"sample_3","text":"Probe product. What is the internal temperature reading at?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"sample_4","text":"Take photo of product and cut open. Does the inside of product meet company standards?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"9rp6cxq","name":"Raw / Cooked Product Handling","questions":[{"id":"tvd1o8d","text":"Are utensils used for cooked / raw meats stored separately and identifiable?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"dgxxxzd","text":"Are hands always washed immediately before and after handling raw product (including raw bake off)?","weight":10,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"u3et4jo","text":"Is the probe wiped with an antibacterial wipe after each use?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"2qbpll2","name":"Personal Hygiene & Food Environment","questions":[{"id":"0txik6d","text":"Is all the correct signage in use: NOW WASH HANDS after toilets/restrooms  HAND WASH/ UTENSIL WASH ONLY above sinks  NO SMOKING at shop door NO DOGS at shop door Hairnets/Hair coverings","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"bdcth4u","text":"Handwash sinks do not have utensils in them.","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"qh1ev7j","text":"Handwash sinks are clean, have hot water, soap and a towel dispenser.\nIn the event any of the above are missing, contact maintenance and head office.","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"0cm10s8","text":"Staff are dressed correctly and clothing is clean.","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"dcy8e6i","text":"Does the manager know the procedure on staff illness, sickness and diarrhea? (ask manager)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"f80s73s","text":"Glass on display units is intact, particularly on edges. If no, report to maintenance immediately.","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"k452uep","text":"Is the manager aware of the glass breakage procedure?\u00a0Do they have a glass clean up kit?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"2eq7d16","text":"Are there NO foreign body threats? (shelves above prep, holes in walls, loose screws, damaged surfaces, etc.)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"k1dz33w","text":"Are there NO outstanding pest control issues?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"wqcpu53","name":"Cleaning and Chemical Use","questions":[{"id":"mnjbi6k","text":"Are there any areas of the shop that are not being cleaned correctly?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"wuf7gn2","text":"Are the structure and fittings smooth and easy to clean?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"k3zmfjs","text":"Is there an adequate stock of chemicals? (not overstock)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"wuftim2","text":"Are chemicals being stored away from food / packaging?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"hhial9t","text":"Floors under equipment such as fridges is free from debris?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cp4z2xr","text":"All waste is in lidded bins and areas are tidy?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"gmffgpe","name":"Cross contamination","questions":[{"id":"n5x6sny","text":"Do staff weara hairnet and wash hands when preparing food in prep area?","weight":10,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"nkx7pfi","text":"Are boards being switched and surfaces being cleaned between changing fillings for filled rolls and sandwiches?","weight":10,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"pvtw450","name":"Records, Equipment & Recall","questions":[{"id":"w91bn95","text":"Is the temperature file/check book readily available and all checks up to date","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"aqwaopm","text":"Calibrate the shop scales: Are all scales in good working order? Report any faults to maintenance immediately.","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cn08omy","text":"Are staff aware of the product recall procedure? (ask staff members)","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]}]},"health":{"title":"Health & Safety","categories":[{"id":"cej0q18","name":"General Workplace Environment","questions":[{"id":"9wngj5w","text":"Is the shop generally clean and tidy?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"seewxlc","text":"Are floors free from obstructions and trip hazards e.g. clutter, trailing cables?","weight":10,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"kifl9cx","text":"BOH, are floors in good condition and non-slip","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"2soqu4i","text":"Is there adequate storage for materials and equipment?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"8cmcrr8","text":"Are boxes/items stored to prevent objects falling/collapsing?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"wsq921k","text":"Is racking/storage shelving secure, stable and in good condition?","weight":10,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"urf567n","text":"Is proof of employers liability insurance on display and is it in date?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"0qd9xmd","text":"Is there a health and safety law poster on display with the relevant details included?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"13jpdjw","text":"Are there no sharp edges which could cause injury?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"qa76fhr","text":"Can the manager on shift tell you where the water/electricity cut-off is? Are they labelled?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"dtc2x1o","name":"Entrance/Exit","questions":[{"id":"hxo0ki0","text":"If there are glazed doors/fronts is there sufficient logos or bands?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"m9dhqrg","text":"Do doors open without introducing risks to customers/public?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"7cue3hw","text":"Is there a sign offering customers assistance if required?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"dm7fx9o","name":"Welfare","questions":[{"id":"uhdbntu","text":"Is there adequate ventilation to remove fumes e.g. oven steam?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"l6a4hu9","text":"Is the staff toilet functioning and clean with adequate handwashing facilities?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"4mfp65e","text":"Are there suitable break facilities including seating, facilities for having a meal and hot water?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"ogovhrb","name":"Machinery and Equipment","questions":[{"id":"q72e7kt","text":"Are there any obvious signs of wear and tear or damage that could affect the safety of the machinery or equipment?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"v07ubj5","name":"Hazardous Substances","questions":[{"id":"hkdz5gw","text":"Are hazardous substances stored safely and securely?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"olo4kdw","text":"Are hazardous substances in appropriate containers and not decanted in unmarked containers?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ttmzrtp","text":"Are there COSHH assessments and safety data sheets available for all hazardous substances? (no personal/unapproved chemicals on site)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"74li6n8","name":"Manual Handling","questions":[{"id":"0pi726y","text":"If manual handling is observed during the inspection visit, do staff lift with the correct technique?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"ab9p1o8","name":"Personal Protective Equipment","questions":[{"id":"6s5w7an","text":"Is there adequate PPE on site including oven gloves, rhino sleeves, disposable gloves and goggles?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"p1opv1p","text":"If observed, do staff use the PPE required for the task (as stipulated in the applicable assessment)?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"olg97id","name":"Mental Health and Stress","questions":[{"id":"s5z35n6","text":"Are contact details for the mental health first aiders/advocates and other resources displayed in an area visible to all employees?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"jgeknb7","name":"Aggression and Violence","questions":[{"id":"q0sq6u0","text":"Have all incidents of violence and aggression been reported back to head office?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"806x0m3","text":"Are the risks of violence and aggression adequately controlled? (discuss with manager)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"wwd9xp2","name":"Asbestos","questions":[{"id":"1tv6yin","text":"Has an asbestos survey been carried out where appropriate and is it available to internal maintenance engineers and external contractors?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ja3ud3s","text":"Are any asbestos containing materials clearly labelled?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"6oxsedf","name":"Legionella","questions":[{"id":"3oj8cvi","text":"Is there a suitable and sufficient legionella risk assessment dated within the last 2 years?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"7td3741","text":"Are control measures as specified in the legionella risk assessment adhered to?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"nq0ifn4","name":"Vulnerable Persons","questions":[{"id":"qfdgjcr","text":"Is there a specific risk assessment in place for any vulnerable persons including new and expectant mothers and those with physical or mental health illnesses or disabilities?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]}]},"fire":{"title":"Fire","categories":[{"id":"rkhsx5o","name":"Ignition Sources","questions":[{"id":"sg87iz0","text":"Are any portable heating appliances fixed at a safe distance away from combustible materials and suitably guarded? Have current PAT test?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"jqkoqkl","text":"Are external waste disposal bins stored a minimum of 6m away from any part of the premises?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"es3c102","text":"Are there NO multiplug adaptors/extension leads in use?","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"nkpemnv","text":"Does the shop have necessary call point test keys","weight":5,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"qlunlxd","text":"Are there NO light bulbs and fittings next to flammable materials?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"c9n0tfr","text":"Is there NO visibly damaged/faulty electrical equipment?Has it been reported to maintenance?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"io3oick","text":"Is there NO security issues which increase the risk of arson?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"rww4irq","name":"Fuel Sources & Kitchen Fire Risk","questions":[{"id":"063xwcz","text":"Are any flammable substances stored safely?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"tjjfph3","text":"Does all furniture upholstery comply with current fire regulations?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"c7c9p98","text":"Is there NO build up of combustibles inside the property? (e.g. cardboard, paper)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"571fq5s","text":"Is there NO build up of combustibles outside the property? (e.g. cardboard, wood)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"5naqpwq","text":"Walls and ceiling are NOT covered with flammable linings? (e.g. polystyrene panels)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"s4c5dyk","text":"Is oven extractor clean and fully operational","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"suytpr4","text":"Is there NO unnecessary build up of other combustibles (e.g. furniture, fabrics, artificial foliage, decorations)?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"atq940h","name":"Structural","questions":[{"id":"lu2e2qe","text":"Are there NO unsealed holes in ceilings, walls, doors which would increase the rate of fire spread (fire stopping)? E.g. around pipework, cabling","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"5w66bf6","name":"Escape Routes and Doors","questions":[{"id":"nlhy50h","text":"Can all fire exits be opened immediately and easily? If electronic locks are fitted is there a functioning release button?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"8xkm6kj","text":"Do fire exit doors open in the direction of escape?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"opcx8tg","text":"Is the risk adequately controlled if the fire exit leads to a change in level? E.g. ramp, warning label","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"qjhjp4i","text":"Are escape routes clear of obstruction?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"8p53yqo","text":"Are the correct directional fire exit and fire exit signs displayed?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"dnb0bwy","text":"Are luminaires and exit signs in good condition and undamaged?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"w8w799n","text":"Are external escape stairs in good condition and non-slip? (if applicable)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"qp3l40n","text":"Are exit routes to the required width? (\u2265750 mm, or \u2265900 mm if wheelchair users may be present)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"xu4pi9w","text":"Is the exit travel distance suitable?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"hdojmb4","text":"Are fire doors closed and not propped open?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"g0cu9tn","text":"Do all fire doors display a \u201cfire door keep closed\u201d sign?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"6nyxees","text":"Are all fire doors fitted with intumescent strips and smoke seals?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"63dydkx","text":"Are there NO large gaps between the fire doors and frames (report anything thicker than a \u00a31 coin)?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"f09xnf6","name":"Fire Alarms, Detection and Emergency Lighting","questions":[{"id":"p0tftv8","text":"Is a suitable fire alarm system installed which provides detection across the premises and alerts all employees and tenants (if applicable) in the event of a fire?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"lwq9oa3","text":"Is there sufficient emergency lighting? (illuminating rooms and escape routes)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"9qjfa3c","text":"Is the fire alarm panel easily accessible and visually undamaged?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"82ah3vd","text":"Is there a zone map next to the fire alarm panel?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"a5w9a4p","text":"Are detectors NOT covered and visibly undamaged?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"m1839j9","text":"Are there break glass call points at suitable points? (exits)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"mr0juod","name":"Fixed Installations and Firefighting Equipment","questions":[{"id":"mg4n0h4","text":"Are there suitable and sufficient fire extinguishers present?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"azf6hi0","text":"Are extinguishers secured to the wall or in a suitable stand?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"3wlrhf2","text":"Are there instruction signs adjacent to all fire extinguishers?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"gsm6ete","text":"If a sprinkler system is present is the panel clearly labelled?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"0rkx92q","name":"Fire Safety Management","questions":[{"id":"6yfa09u","text":"Is there a copy of the most recent fire safety policy available to staff (online training platform)?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"n81iol0","text":"Is there a fire emergency plan in place in line with Birds Fire Safety Policy?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"0rlwgwa","text":"Are staff, including managers, suitably trained in fire safety? (online training modules)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"z59cxpr","text":"Are fire evacuation drills carried out at least every 3 months and recorded?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cqbko60","text":"Are there special arrangements (Personal Emergency Evacuation Plan (PEEP) in place for high-risk personnel e.g. disabled employees, lone workers?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"rbx5aty","text":"Is there a fire action notice clearly displayed in the shop which is visible to customers?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"fuq8fju","text":"Is an up to date, suitable and sufficient fire risk assessment which is available to staff? (review at least every 2 years or upon significant change)","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"ica5q60","name":"Testing and Maintenance of Equipment","questions":[{"id":"ubv97zl","text":"Has portable electrical equipment been tested in the past 24 months (PAT)?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"plby3h7","text":"Has fixed electrical testing been undertaken in the past 5 years?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"58ctzcd","text":"Has the fire alarm system been serviced by a competent person in the past 6 months?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"d2qhg3n","text":"Has the emergency lighting been drain tested by a competent person in the past 6 months?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"mc8uyx0","text":"Have the fire extinguishers/blankets been serviced by a competent person in the past 12 months?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"n1d1z9c","text":"If present, has the sprinkler system been serviced by a competent person in the past 6 months?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"dl2dr6i","text":"Have refrigeration units been serviced within the past 12 months?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"6jsan2l","text":"Have air conditioning units been serviced within the past 12 months?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"4q702cm","text":"Has the fire alarm been tested by staff weekly and recorded, rotating the call point each week?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cqr5fve","text":"Have extinguishers/blankets been visually checked monthly and recorded?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cx6r04i","text":"Has the emergency lighting been flick tested monthly and recorded?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"d333gzq","text":"Has the sprinkler system been tested by staff and recorded every 3 months?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]}]},"coffee":{"title":"Coffee","categories":[{"id":"pzx415x","name":"External","questions":[{"id":"oa3ia9g","text":"Within viewing range how many other stores offer coffee?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"zqjone8","text":"Any signs/POS that the store sells coffee?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"0hiw2wb","text":"Coffee machine visible from outside?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ymr2e8o","text":"Is there a tea urn in the store?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"fxrpqzb","name":"Coffee machine","questions":[{"id":"wrzslvd","text":"Where is the coffee machine located?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"z489jo4","text":"Any POS advertising coffee?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"zopb9t7","text":"Enough cups, lids, sugar etc. accessible?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"2b1jlo1","text":"Observe service \u2013 are customers offered hot drinks? How?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"q82kg02","text":"How many coffees have been made before time of visit?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"19u4j0s","text":"Hopper appropriately filled with beans?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"rd7a6ql","text":"Do the beans look/smell fresh?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"sfuczcx","text":"Coffee station clean and tidy?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"ve0dqj4","text":"Is the hopper clean?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"tprzog6","text":"Open beans kept in an airtight container?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"74togfu","text":"Container labelled and dated?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"qqaa743","name":"Measurement \u2013 Technical Information","questions":[{"id":"s3n9bia","text":"Brew time of double espresso (21\u201325s)?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"efhj1u1","text":"Double espresso weight (45\u201350g)?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"4jhromg","text":"If out of range, did fresh beans correct the issue?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"1naq4yr","text":"Machine recently serviced?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"the0npj","text":"Any current issues with the coffee machine?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"yxucwaw","name":"Other observations","questions":[{"id":"92vuo5t","text":"Is the ice machine clean?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]}]},"customer":{"title":"Customer Journey","categories":[{"id":"o2ncagm","name":"Customer Journey","questions":[{"id":"cj_new_1","text":"Is the external part of the building well presented (e.g. no cracks, slip or trip hazards)?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_2","text":"Is there a sign offering customer assistance?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_3","text":"Is there a sign clearly stating opening times?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_4","text":"Is there a member of staff present behind the bar and/or on the shop floor?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_5","text":"Is the internal flooring in good condition?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_6","text":"Is all internal and external signage in good condition and clearly readable?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_7","text":"Are all products well displayed?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_8","text":"Are any products broken or damaged and requiring removal?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_9","text":"Do all products have tickets clearly displayed and in good condition?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_10","text":"Are all customer products in date and displayed in the correct date order?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_11","text":"Are all lights working and adequately illuminating the customer areas?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_12","text":"Is the air conditioning clean and fully operational?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_13","text":"Are all customer-facing surfaces and floors free from dust and debris?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_14","text":"Are customer toilets clean, well stocked and is the door fully operational?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"cj_new_15","text":"If tables and chairs are provided, are they neatly arranged and in good working condition?","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]}]},"birds_focus":{"title":"Birds Focus","categories":[{"id":"cd27bdf","name":"Energy","questions":[{"id":"97de397","text":"What are the hot plate settings","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"65e8672","text":"What is the heat lamp dial set to","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"69158df","text":"FOH: what are the fridges set to","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"c824628","text":"BOH: what are the fridges set to","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"6a6877b","text":"Aircon: what are they set to","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]},{"id":"4ff8d9d","name":"Training","questions":[{"id":"7270e5c","text":"Do all members of management have current Level 3 Food Safety","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""},{"id":"f2fb34b","text":"Do all team members have current Level 2 Food Safety","weight":1,"answer":null,"photo":null,"photoThumb":null,"action":null,"comment":""}]}]}};
+    // Build mode toggle (UI only) 
+    var BUILD_MODE = false;
+    // ===== Navigation & rendering ===== 
+    var nav = { level: 'sectors', sectorId: null, categoryId: null };
+    function render() {
+      $('#storeName').value = state.meta.store || '';
+      $('#auditDate').value = state.meta.date || '';
+      $('#auditorName').value = state.meta.auditor || '';
+      $('#storeManager').value = state.meta.manager || '';
+      $('#areaManager').value = state.meta.areaManager || '';
+      renderCrumbs();
+ if ($('#auditorFeedback')) { $('#auditorFeedback').value = state.meta.auditorFeedback || ''; if ($('#afCounter')) $('#afCounter').textContent = ($('#auditorFeedback').value.length) + ' / 300'; }
+      if (Object.keys(state.sectors || {}).length === 0) {
+        var pane = $('#pane'); pane.innerHTML = '';
+        pane.appendChild(el('div', { class: 'hint' }, ['Questions could not be loaded. Click ', el('b', {}, ['Load Question Set (.json)']), ' to import manually.']));
+      } else {
+        if (nav.level === 'sectors') renderSectors();
+        else if (nav.level === 'categories') renderCategories(nav.sectorId);
+        else if (nav.level === 'questions') renderQuestions(nav.sectorId, nav.categoryId);
+      }
+      applyWatermarkToPage(); applyBuildModeUI();
+
+// Ensure any pending autosave is flushed when the app is backgrounded
+document.addEventListener('visibilitychange', function(){
+  try {
+    if (document.hidden && _qsPending) { quickSaveNow(); }
+  } catch(e){}
+});
+      updateOverallScore(); updateFloatingScore();
+      renderActionPlan(); updateFloatingScore();
+    }
+    function renderCrumbs() {
+      var c = $('#crumbs'); c.innerHTML = '';
+      var root = el('span', { 'class': 'crumb' }, ['Sectors']);
+      root.addEventListener('click', function () { nav = { level: 'sectors', sectorId: null, categoryId: null }; render(); }); c.appendChild(root);
+      if (nav.level !== 'sectors' && nav.sectorId) {
+        c.appendChild(el('span', { 'class': 'sep' }, ['\u203A']));
+        var sec = getSector(nav.sectorId);
+        var s = el('span', { 'class': 'crumb' }, [sec.title]);
+        s.addEventListener('click', function () { nav = { level: 'categories', sectorId: nav.sectorId, categoryId: null }; render(); }); c.appendChild(s);
+      }
+      if (nav.level === 'questions') {
+        c.appendChild(el('span', { 'class': 'sep' }, ['\u203A']));
+        var cat = getCategory(nav.sectorId, nav.categoryId);
+        var catSpan = el('span', { 'class': 'crumb' }, [cat.name]);
+        catSpan.addEventListener('click', function () { nav = { level: 'categories', sectorId: nav.sectorId, categoryId: null }; render(); }); c.appendChild(catSpan);
+      }
+    }
+    function renderSectors() {
+      var pane = $('#pane'); pane.innerHTML = '';
+      var tiles = el('div', { 'class': 'tiles auto' });
+      for (var id in state.sectors) {
+        var sec = state.sectors[id]; var counts = tallySector(id);
+        var totalQs = 0;
+        (sec.categories || []).forEach(function (cat) { totalQs += (cat.questions || []).length; });
+        var pct = counts.pct || 0;
+        var barColor = counts.failed ? '#dc2626' : (pct >= 70 ? '#10b981' : (pct >= 40 ? '#f59e0b' : '#ef4444'));
+        var scoreLabel = counts.failed ? 'FAILED' : (counts.answered > 0 ? pct + '%' : 'Not started');
+        var t = el('div', { 'class': 'tile', role: 'button', 'aria-label': sec.title });
+        t.innerHTML = '<h3>' + esc(sec.title) + '</h3>' +
+          '<div style="margin:6px 0 8px;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden">' +
+            '<div style="height:100%;width:' + (totalQs ? Math.round((counts.answered / totalQs) * 100) : 0) + '%;background:' + barColor + ';border-radius:3px;transition:width .3s"></div>' +
+          '</div>' +
+          '<p style="margin:0;font-size:13px;display:flex;justify-content:space-between;align-items:center">' +
+            '<span>Score: <b style="color:' + barColor + '">' + scoreLabel + '</b></span>' +
+            '<span>' + counts.answered + '/' + totalQs + ' answered</span>' +
+          '</p>' +
+          (counts.open > 0 ? '<p style="margin:4px 0 0;font-size:12px;color:#dc2626">' + counts.open + ' open action' + (counts.open === 1 ? '' : 's') + '</p>' : '');
+        (function (id) { t.addEventListener('click', function () { nav = { level: 'categories', sectorId: id, categoryId: null }; render(); }); })(id);
+        tiles.appendChild(t);
+      }
+      pane.appendChild(tiles);
+    }
+    function renderCategories(sectorId) {
+      var pane = $('#pane'); pane.innerHTML = '';
+      var sec = getSector(sectorId);
+      var controls = el('div', {});
+      var btnExpand = el('button', { 'class': 'btn ghost', type: 'button' }, ['Expand all']);
+      var btnCollapse = el('button', { 'class': 'btn ghost', type: 'button' }, ['Collapse all']);
+      controls.style.marginBottom = '8px'; controls.style.display = 'flex'; controls.style.gap = '8px';
+      controls.appendChild(btnExpand); controls.appendChild(btnCollapse); pane.appendChild(controls);
+      var list = el('div', {});
+      (sec.categories || []).forEach(function (cat) {
+        var box = el('div', { 'class': 'cat' });
+        var title = el('div', { 'class': 'cat-title', contenteditable: 'true', spellcheck: 'false' }, [cat.name]);
+        // Debounced quickSave to reduce writes
+        window._debouncedQS = window._debouncedQS || (function (f, w) { var t; return function () { clearTimeout(t); t = setTimeout(function () { try { f(); } catch (e) { } }, w || 300); }; })(quickSave, 300);
+        title.addEventListener('input', function () { cat.name = title.textContent; window._debouncedQS(); renderActionPlan(); updateFloatingScore(); });
+        var head = el('div', { 'class': 'cat-head' }, [title, el('button', { 'class': 'btn ghost', type: 'button', 'aria-expanded': 'false' }, ['Expand'])]);
+        var body = el('div', { 'class': 'cat-body' }); head.lastChild.addEventListener('click', function () { if (box.classList.contains('open')) { box.classList.remove('open'); head.lastChild.textContent = 'Expand'; head.lastChild.setAttribute('aria-expanded', 'false'); body.style.display = 'none'; } else { box.classList.add('open'); head.lastChild.textContent = 'Collapse'; head.lastChild.setAttribute('aria-expanded', 'true'); body.style.display = 'block'; } }); body.style.display = 'none';
+        (cat.questions || []).forEach(function (qn) { body.appendChild(renderQuestion(qn)); });
+        box.appendChild(head); box.appendChild(body); list.appendChild(box);
+      });
+      pane.appendChild(list);
+      btnExpand.addEventListener('click', function () { list.querySelectorAll('.cat').forEach(function (box) { var b = box.querySelector('.cat-body'); var t = box.querySelector('.btn.ghost'); box.classList.add('open'); if (b) b.style.display = 'block'; if (t) t.textContent = 'Collapse'; }); });
+      btnCollapse.addEventListener('click', function () { list.querySelectorAll('.cat').forEach(function (box) { var b = box.querySelector('.cat-body'); var t = box.querySelector('.btn.ghost'); box.classList.remove('open'); if (b) b.style.display = 'none'; if (t) t.textContent = 'Expand'; }); });
+    }
+    function renderQuestions(sectorId, categoryId) {
+      var pane = $('#pane'); pane.innerHTML = '';
+      var cat = getCategory(sectorId, categoryId);
+      var box = el('div', { 'class': 'cat open' });
+      var head = el('div', { 'class': 'cat-head' }, [el('div', { 'class': 'cat-title' }, [cat.name]), el('button', { 'class': 'btn ghost', type: 'button' }, ['Collapse'])]);
+      var body = el('div', { 'class': 'cat-body' }); head.lastChild.addEventListener('click', function () { if (box.classList.contains('open')) { box.classList.remove('open'); head.lastChild.textContent = 'Expand'; } else { box.classList.add('open'); head.lastChild.textContent = 'Collapse'; } }); body.style.display = 'block';
+      (cat.questions || []).forEach(function (qn) { body.appendChild(renderQuestion(qn)); });
+      box.appendChild(head); box.appendChild(body); pane.appendChild(box);
+    }
+    // ---- Question row ---- 
+    function renderQuestion(qn) {
+      var wrap = el('div', { 'class': 'q', 'data-id': qn.id || (qn.id = uid()) });
+      var title = el('div', { 'class': 'qtitle', spellcheck: 'false' }, [qn.text]); if (BUILD_MODE) { title.setAttribute('contenteditable', 'true'); }
+      title.addEventListener('input', function () { if (!BUILD_MODE) return; qn.text = title.textContent; quickSave(); renderActionPlan(); updateFloatingScore(); });
+      var head = el('div', { 'class': 'qhead' }, [title, el('div', { 'class': 'answers' }, [ansChip(qn, 'Pass'), ansChip(qn, 'Fail'), ansChip(qn, 'NA')])]);
+      // -- Build Mode: Weight UI (UI only; scoring unchanged in Step 1) 
+      (function () {
+        var weightWrap = el('div', { style: 'display:flex;align-items:center;gap:6px;' });
+        var weightLbl = el('span', { class: 'pill' }, ['Weight']);
+        var weightInp = el('input', {
+          type: 'number', min: '1', max: '10', value: String(qn.weight || 1),
+          style: 'width:64px;padding:6px;border:1px solid var(--border);border-radius:8px;'
+        });
+        weightInp.addEventListener('input', function () {
+          var v = parseInt(this.value, 10); qn.weight = (isNaN(v) || v < 1) ? 1 : v; quickSave();
+        });
+        if (!BUILD_MODE) weightWrap.style.display = 'none';
+        weightWrap.appendChild(weightLbl);
+        weightWrap.appendChild(weightInp);
+        head.appendChild(weightWrap);
+      })();
+      wrap.appendChild(head);
+      // Photo 
+      var ph = el('div', { 'class': 'photo' });
+      var lab = el('label', {}, ['Add photo']);
+      var inp = el('input', {}); inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+      var img = el('img', { 'class': 'thumb', 'id': 'thumb_' + qn.id });
+      var dlLink = el('a', { style: 'display:none; color:#10b981; font-size:12px; cursor:pointer; text-decoration:underline; padding-left:10px;' }, ['Download Full Image']);
+      if (qn.photo) { dlLink.style.display = 'block'; img.src = qn.photoThumb_removed || qn.photo; img.style.display = 'block'; }
+      dlLink.onclick = function(ev) { ev.preventDefault(); if (qn.photo) { var a = document.createElement('a'); a.href = qn.photo; a.download = 'Evidence_' + qn.id + '.jpg'; document.body.appendChild(a); a.click(); document.body.removeChild(a); } };
+      lab.appendChild(inp); ph.appendChild(lab); ph.appendChild(img); ph.appendChild(dlLink);
+      inp.addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; (async function () { try { var data = await readFileAsDataURL(f); var thumb = await makeThumb(data, 1200, 'image/jpeg', 0.5); qn.photo = data; qn.photoThumb_removed = thumb; img.src = thumb; img.style.display = 'block'; dlLink.style.display = 'block'; } catch (err) { var fr = new FileReader(); fr.onload = function () { qn.photo = fr.result; img.src = fr.result; img.style.display = 'block'; dlLink.style.display = 'block'; }; fr.readAsDataURL(f); } quickSave(); renderActionPlan(); updateFloatingScore(); })(); });
+      wrap.appendChild(ph);
+      // Comment (general, separate from Action Plan) 
+      var cWrap = el('div', { 'class': 'comment' });
+      var cBtn = el('button', { 'class': 'btn small', type: 'button' }, [(qn.comment && qn.comment.trim()) ? 'Hide comment' : 'Add comment']);
+      var cBox = el('div', { 'class': 'comment-box' + ((qn.comment && qn.comment.trim()) ? ' active' : '') });
+      cBox.innerHTML = '<textarea class="q-comment" placeholder="Add a general comment (not part of the Action Plan)"></textarea>';
+      if (qn.comment) { cBox.querySelector('.q-comment').value = qn.comment; }
+      cBtn.addEventListener('click', function () { var open = cBox.classList.toggle('active'); cBtn.textContent = open ? 'Hide comment' : 'Add comment'; });
+      cBox.addEventListener('input', function () { qn.comment = cBox.querySelector('.q-comment').value; quickSave(); });
+      cWrap.appendChild(cBtn); cWrap.appendChild(cBox);
+      // ---- Additional evidence (collapsible, 1 photo only) 
+      (function () {
+        var evBtn = el('button', { style: 'display:none' }, '');
+        var evBox = el('div', { 'class': 'comment-box', 'style': 'display:none' });
+        // Photo UI (single) 
+        var evPhotoLabel = el('label', {}, ['Add evidence photo']); evPhotoLabel.style.cursor = 'pointer';
+        var evInput = el('input', {}); evInput.type = 'file'; evInput.accept = 'image/*'; evInput.style.display = 'none';
+        evPhotoLabel.addEventListener('click', function () { evInput.click(); });
+        var evImg = el('img', { 'class': 'thumb' }); evImg.style.display = (qn.extraPhotoThumb ? 'block' : 'none'); if (qn.extraPhotoThumb) { evImg.src = qn.extraPhotoThumb; }
+        var evDlLink = el('a', { style: 'display:none; color:#10b981; font-size:12px; cursor:pointer; text-decoration:underline; padding-left:10px;' }, ['Download Extra Image']);
+        if (qn.extraPhoto) { evDlLink.style.display = 'block'; }
+        evDlLink.onclick = function(ev) { ev.preventDefault(); if (qn.extraPhoto) { var a = document.createElement('a'); a.href = qn.extraPhoto; a.download = 'Extra_Evidence_' + qn.id + '.jpg'; document.body.appendChild(a); a.click(); document.body.removeChild(a); } };
+        var evComment = el('textarea', { 'class': 'q-comment', placeholder: 'Extra evidence comment (optional)' }); if (qn.extraComment) { evComment.value = qn.extraComment; }
+        evBox.appendChild(evPhotoLabel); evBox.appendChild(evInput); evBox.appendChild(evImg); evBox.appendChild(evDlLink); evBox.appendChild(evComment);
+        evBtn.addEventListener('click', function () { var open = evBox.classList.toggle('active'); evBtn.textContent = open ? 'Hide additional evidence' : 'Additional evidence'; });
+        evInput.addEventListener('change', async function (e) {
+          var f = e.target.files && e.target.files[0]; if (!f) return; try { var data = await readFileAsDataURL(f); var th = await makeThumb(data, 1200, 'image/jpeg', 0.5); qn.extraPhoto = data; qn.extraPhotoThumb = th; evImg.src = th; evImg.style.display = 'block'; evDlLink.style.display = 'block'; quickSave(); } catch (err) { var fr = new FileReader(); fr.onload = function () { qn.extraPhoto = fr.result; qn.extraPhotoThumb = null; evImg.src = fr.result; evImg.style.display = 'block'; evDlLink.style.display = 'block'; quickSave(); }; fr.readAsDataURL(f); }
+        });
+        evComment.addEventListener('input', function () { qn.extraComment = evComment.value; quickSave(); });
+        cWrap.appendChild(evBtn); cWrap.appendChild(evBox);
+      })();
+      wrap.appendChild(cWrap);
+      // Action plan 
+      var apToggle = el('div', { 'class': 'ap-toggle' });
+      var apBtn = el('button', { 'class': 'btn small', type: 'button' }, [(qn.action && qn.action.enabled) ? 'Remove from Action Plan' : 'Add to Action Plan']);
+      apToggle.appendChild(apBtn); wrap.appendChild(apToggle);
+      var apFields = el('div', { 'class': 'ap-fields' + ((qn.action && qn.action.enabled) ? ' active' : '') });
+      apFields.innerHTML = (
+        ['<div class="grid">',
+          ' <label>Description <textarea class="ap-desc" placeholder="Describe the issue"></textarea></label>',
+          ' <label>Person responsible <select class="ap-person"><option value=""><option value="All team members">All team members</option>Select person responsible</option><option>Store Manager</option><option>Area Manager</option><option>Maintenance</option><option>Health and Safety</option><option>Food Safety</option><option>Auditor</option></select></label>',
+          ' <label>Action needed <textarea class="ap-action" placeholder="A sentence or two describing the action"></textarea></label>',
+          '</div>',
+          '<div class="grid">',
+          ' <label>Status <select class="ap-status"><option>Open</option><option>Closed</option></select></label>',
+          ' <label>Closed on <input type="date" class="ap-closedOn" disabled title="Auto-filled when status = Closed"></label>',
+          ' <button type="button" class="btn small ap-critical-btn" style="background:#dc2626;color:white;">Mark as Critical</button>',
+          '</div>']
+      ).join('');
+      wrap.appendChild(apFields);
+      if (qn.action && qn.action.enabled) { apFields.querySelector('.ap-desc').value = qn.action.description || ''; apFields.querySelector('.ap-person').value = qn.action.person || ''; apFields.querySelector('.ap-action').value = qn.action.actionNeeded || ''; apFields.querySelector('.ap-status').value = qn.action.status || 'Open'; apFields.querySelector('.ap-closedOn').value = qn.action.closedOn || ''; var btn = apFields.querySelector('.ap-critical-btn'); if (btn) { btn.textContent = qn.action.critical ? 'Unmark Critical' : 'Mark as Critical'; btn.style.background = qn.action.critical ? '#666' : '#dc2626'; } }
+      apBtn.addEventListener('click', function () { var now = new Date().toISOString(); qn.action = qn.action || { enabled: false, description: '', person: '', actionNeeded: '', status: 'Open', closedOn: '', createdAt: now, updatedAt: now }; qn.action.enabled = !qn.action.enabled; qn.action.updatedAt = now; if (qn.action.enabled) { apBtn.textContent = 'Remove from Action Plan'; apFields.classList.add('active'); } else { apBtn.textContent = 'Add to Action Plan'; apFields.classList.remove('active'); } updateOverallScore(); updateFloatingScore(); quickSave(); renderActionPlan(); updateFloatingScore(); });
+      apFields.addEventListener('input', function () { var now = new Date().toISOString(); if (!qn.action) qn.action = { enabled: true, description: '', person: '', actionNeeded: '', status: 'Open', closedOn: '', createdAt: now, updatedAt: now }; var prev = qn.action.status; qn.action.enabled = true; qn.action.description = apFields.querySelector('.ap-desc').value || ''; qn.action.person = apFields.querySelector('.ap-person').value || ''; qn.action.actionNeeded = apFields.querySelector('.ap-action').value || ''; qn.action.status = apFields.querySelector('.ap-status').value || 'Open'; if (prev !== qn.action.status) { if (qn.action.status === 'Closed' && !qn.action.closedOn) { qn.action.closedOn = (new Date()).toISOString().slice(0, 10); } if (qn.action.status === 'Open') { qn.action.closedOn = ''; } apFields.querySelector('.ap-closedOn').value = qn.action.closedOn || ''; } updateOverallScore(); updateFloatingScore(); quickSave(); renderActionPlan(); updateFloatingScore(); });
+      var criticalBtn = apFields.querySelector('.ap-critical-btn'); if (criticalBtn) { criticalBtn.addEventListener('click', function () { if (!qn.action) return; qn.action.critical = !qn.action.critical; if (qn.action.critical) { qn.weight = 20; } else if (qn.weight === 20) { qn.weight = 1; } this.textContent = qn.action.critical ? 'Unmark Critical' : 'Mark as Critical'; this.style.background = qn.action.critical ? '#666' : '#dc2626'; updateOverallScore(); updateFloatingScore(); quickSave(); renderActionPlan(); updateFloatingScore(); }); }
+      return wrap;
+    }
+    
+function ansChip(qn, type) {
+  var input = el('input', { type: 'radio', name: 'ans_' + qn.id, value: type });
+  input.checked = (qn.answer === type);
+  input.addEventListener('change', function () {
+    qn.answer = type;
+    updateOverallScore(); updateFloatingScore(); quickSave(); renderActionPlan(); updateFloatingScore();
+  });
+  return el('label', {}, [input, type]);
+}
+    // ---- Helpers ---- 
+    function readFileAsDataURL(file) { return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(fr.result) }; fr.onerror = rej; fr.readAsDataURL(file); }); }
+    function loadImage(src) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i) }; i.onerror = rej; i.src = src; }); }
+    function createSquareCanvas(w, h, size) { var _w = size, _h = Math.round(size * (h / w)); if (h > w) { _h = size; _w = Math.round(size * (w / h)); } var c = document.createElement('canvas'); c.width = size; c.height = size; c._w = _w; c._h = _h; var ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size); return { canvas: c, ctx: ctx }; }
+// Detect WebP support for smaller thumbnails
+var SUPPORTS_WEBP = (function(){
+  try {
+    var c = document.createElement('canvas');
+    return c.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  } catch(e) { return false; }
+})();
+
+async function makeThumb(dataURL, size, mime, quality) {
+  // Upgraded: Significantly larger resolution (2400px instead of 64px)
+  size = size || 2400; 
+  
+  // Prefer WebP where supported
+  mime = mime || (SUPPORTS_WEBP ? 'image/webp' : 'image/jpeg');
+  
+  // Upgraded: Increased quality to 95% (0.95) for crisp rendering
+  quality = (quality != null) ? quality : 0.95; 
+  
+  var img = await loadImage(dataURL);
+  var o = createSquareCanvas(img.width, img.height, size);
+  o.ctx.drawImage(img, (size - o.canvas._w) / 2, (size - o.canvas._h) / 2, o.canvas._w, o.canvas._h);
+  return o.canvas.toDataURL(mime, quality);
+}
+
+    // ===== Pro helpers (no unanswered filter/warning) ===== 
+    function isAnswered(q) {
+      return q.answer === 'Pass'
+        || q.answer === 'Fail'
+        || q.answer === 'NA';
+    }
+    function setSaveStatus(mode) { var el = document.getElementById('saveStatus'); if (!el) return; el.classList.remove('saving', 'error'); if (mode === 'saving') { el.textContent = 'Saving…'; el.classList.add('saving'); } else if (mode === 'error') { el.textContent = 'Not saved'; el.classList.add('error'); } else { el.textContent = 'Saved'; } }
+    function updateFloatingScore() { try { var pct = document.getElementById('scorePct').textContent.replace('%', '') || '0'; var open = document.getElementById('openActions').textContent || '0'; var b = document.getElementById('floatingScore'); if (!b) return; b.textContent = 'Score: ' + pct + '% • Actions: ' + open; b.style.display = 'block'; } catch (_) { } }
+    function buildSectorDrawer() { var host = document.getElementById('sectorDrawerList'); if (!host) return; host.innerHTML = ''; for (var sid in state.sectors) { var sec = state.sectors[sid]; var t = tallySector(sid); var card = el('div', { 'class': 'drawer-card' }); card.appendChild(el('div', { 'class': 't' }, [sec.title])); card.appendChild(el('div', { 'class': 'm' }, ['Answered: ' + t.answered + ' • Open actions: ' + t.open + ' • Score: ' + t.pct + '%'])); (function (s) { card.addEventListener('click', function () { nav = { level: 'categories', sectorId: s, categoryId: null }; closeDrawer(); render(); }); })(sid); host.appendChild(card); } }
+    function openDrawer() { var d = document.getElementById('sectorDrawer'); if (!d) return; buildSectorDrawer(); d.style.bottom = '0'; }
+    function closeDrawer() { var d = document.getElementById('sectorDrawer'); if (!d) return; d.style.bottom = '-70vh'; }
+    (function () { var sx = 0, sy = 0, t0 = 0; document.addEventListener('touchstart', function (e) { var t = e.touches && e.touches[0]; if (!t) return; sx = t.clientX; sy = t.clientY; t0 = Date.now(); }, { passive: true }); document.addEventListener('touchend', function (e) { var t = e.changedTouches && e.changedTouches[0]; if (!t) return; var dx = t.clientX - sx, dy = Math.abs(t.clientY - sy), dt = Date.now() - t0; if (sx <= 24 && dx > 60 && dy < 40 && dt < 600) { if (nav.level === 'questions') { nav = { level: 'categories', sectorId: nav.sectorId, categoryId: null }; render(); } else if (nav.level === 'categories') { nav = { level: 'sectors', sectorId: null, categoryId: null }; render(); } } }, { passive: true }); })();
+    // Build-mode toggler for header controls (+ text edit gating hooks below) 
+    function applyBuildModeUI() { try { document.querySelectorAll('.build-only').forEach(function (el) { el.style.display = BUILD_MODE ? '' : 'none'; }); var lab = document.getElementById('modeLabel'); if (lab) lab.textContent = BUILD_MODE ? 'Build mode' : 'Audit mode'; } catch (e) { } }
+    
+// ===== Consistent scoring helpers (weighted + critical penalties) =====
+function sectorMetrics(sectorId){
+ const sec = state.sectors[sectorId];
+ let accrued=0, max=0, criticalCount=0, answered=0, open=0;
+ (sec.categories||[]).forEach(cat=>{
+  (cat.questions||[]).forEach(q=>{
+   const w = (q.weight==null?1:Number(q.weight)) || 1;
+
+   // ✅ Only count Pass/Fail (exclude NA entirely)
+   if (q.answer==='Pass' || q.answer==='Fail') {
+     max += w;
+     answered++;
+
+     const scored = (q.answer==='Pass') ||
+       (q.answer==='Fail' && q.action && q.action.enabled && q.action.status==='Closed');
+
+     if (scored) accrued += w;
+   }
+
+   // keep existing logic (actions + criticals)
+   if (q.action && q.action.enabled && q.action.status==='Open') open++;
+   if (q.action && q.action.enabled && q.action.critical) criticalCount++;
+  });
+ });
+ const basePct = max ? (accrued/max)*100 : 0;
+ let penalty = 0;
+ let failed = false;
+ if (criticalCount>=3){ failed=true; }
+ else if (criticalCount===1){ penalty=10; }
+ else if (criticalCount===2){ penalty=20; }
+ const penalisedPct = failed ? 0 : Math.max(0, Math.round(basePct - penalty));
+ return {accrued,max,answered,open,criticalCount,basePct,penalty,failed,penalisedPct};
+}
+
+function overallMetrics(){
+  let totalAccrued=0, totalMax=0, totalAnswered=0, totalOpen=0;
+  for (const sid in state.sectors){
+    const m = sectorMetrics(sid);
+    totalOpen += m.open;
+    if (!m.answered) continue; // ignore untouched sectors
+    totalAnswered += m.answered;
+    if (m.failed) continue; // failed sectors contribute zero
+    // Apply penalty at sector level then convert back to points
+    totalAccrued += (m.penalisedPct/100) * m.max;
+    totalMax += m.max;
+  }
+  const pct = totalMax ? Math.round((totalAccrued/totalMax)*100) : 0;
+  return {totalAccrued,totalMax,totalAnswered,totalOpen,pct};
+}
+
+// ===== Lookups & scoring ===== 
+    function getSector(id) { return state.sectors[id]; }
+    function getCategory(sectorId, categoryId) { var cats = state.sectors[sectorId].categories; for (var i = 0; i < cats.length; i++) { if (cats[i].id === categoryId) return cats[i]; } return null; }
+    function isSectorCriticalFailed(sectorId) { var sec = state.sectors[sectorId]; if (!sec) return false; var criticalCount = 0; (sec.categories || []).forEach(function (cat) { (cat.questions || []).forEach(function (q) { if (q.action && q.action.enabled && q.action.critical) { criticalCount++; } }); }); return criticalCount >= 3; }
+    function tallyCategory(sectorId, categoryId) { var cat = getCategory(sectorId, categoryId); var answeredQs = 0, openActs = 0, scored = 0; var sectorFailed = isSectorCriticalFailed(sectorId); (cat.questions || []).forEach(function (q) { var isAns = (q.answer === 'Pass' || q.answer === 'Fail'); if (isAns) { answeredQs++; var a = q.action && q.action.enabled ? q.action : null; var hasOpen = !!(a && a.status === 'Open'); if (!hasOpen && ((q.answer === 'Pass') || (q.answer === 'Fail' && a && a.status === 'Closed'))) { scored++; } } if (q.action && q.action.enabled && q.action.status === 'Open') openActs++; }); var pct = answeredQs ? Math.round((scored / answeredQs) * 100) : 0; if (sectorFailed) { scored = 0; pct = 0; } return { answered: answeredQs, open: openActs, scored: scored, pct: pct }; }
+    
+function tallySector(id) {
+  const m = sectorMetrics(id);
+  return { answered: m.answered, open: m.open, pct: m.penalisedPct, failed: m.failed, criticalCount: m.criticalCount };
+}
+
+    
+function updateOverallScore() {
+  const o = overallMetrics();
+  // Answered (Pass/Fail)
+  document.getElementById('answered').textContent = String(o.totalAnswered);
+  // Open actions
+  document.getElementById('openActions').textContent = String(o.totalOpen);
+  // Overall score
+  document.getElementById('scorePct').textContent = o.pct + '%';
+
+  var C = 2 * Math.PI * 18;
+  var val = (o.pct / 100) * C;
+  document.getElementById('donutVal').setAttribute('stroke-dasharray', val.toFixed(1) + ' ' + C.toFixed(1));
+  document.getElementById('donutText').textContent = o.pct + '%';
+}
+
+    // ===== Action Plan (render + CSV) ===== 
+    function getActionItems() { var items = []; for (var sid in state.sectors) { var sec = state.sectors[sid]; (sec.categories || []).forEach(function (cat) { (cat.questions || []).forEach(function (q) { if (q.action && q.action.enabled) { items.push({ sector: sec.title, category: cat.name, id: q.id, text: q.text, action: q.action, photo: q.photo, photoThumb_removed: q.photoThumb_removed, comment: q.comment || '', answer: q.answer, weight: q.weight || '', sectorId: sid, categoryId: cat.id }); } }); }); } return items; }
+    function findQuestionPath(questionId) { for (var sid in state.sectors) { var cats = state.sectors[sid].categories || []; for (var ci = 0; ci < cats.length; ci++) { var cat = cats[ci]; var qs = cat.questions || []; for (var qi = 0; qi < qs.length; qi++) { if (String(qs[qi].id) === String(questionId)) { return { sectorId: sid, categoryId: cat.id }; } } } } return null; }
+    function scrollQuestionById(questionId) { var qEl = document.querySelector('.q[data-id="' + String(questionId).replace(/"/g, '\\"') + '"]'); if (qEl) { qEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); qEl.classList.add('ap-highlight'); setTimeout(function () { qEl.classList.remove('ap-highlight'); }, 1600); } }
+    function renderActionPlan() { var body = $('#apBody'); if (!body) return; body.innerHTML = ''; var statusFilter = ($('#apFilterStatus') && $('#apFilterStatus').value) || 'open'; var items = getActionItems(); if (statusFilter !== 'all') { items = items.filter(function (a) { return String((a.action && a.action.status) || 'Open').toLowerCase() === statusFilter; }); } items.sort(function (a, b) { return (b.action.critical ? 1 : 0) - (a.action.critical ? 1 : 0); }); $('#apCount').textContent = items.length + ' item' + (items.length === 1 ? '' : 's'); items.forEach(function (a) { var tr = document.createElement('tr'); tr.dataset.qid = a.id; tr.title = 'Click to open the related question'; tr.setAttribute('role', 'button'); var critical = a.action.critical ? '<span style="color:#dc2626;font-weight:bold;">CRITICAL</span>' : ''; tr.innerHTML = '<td>' + esc(a.sector) + ' / ' + esc(a.category) + '</td>' + '<td>' + esc((a.action && a.action.description) || '') + '</td>' + '<td>' + esc((a.action && a.action.person) || '') + '</td>' + '<td>' + esc((a.action && a.action.actionNeeded) || '') + '</td>' + '<td>' + esc((a.action && a.action.status) || '') + '</td>' + '<td>' + esc((a.action && a.action.closedOn) || '') + '</td>' + '<td style="text-align:center;">' + critical + '</td>' + '<td style="text-align:center;">' + (a.photoThumb_removed ? '<img src="' + a.photoThumb_removed + '" width="40" height="40" style="border-radius:6px;border:1px solid var(--border);object-fit:cover">' : (a.photo ? 'Yes' : '')) + '</td>'; tr.addEventListener('click', function () { var path = findQuestionPath(a.id); if (!path) return; nav = { level: 'questions', sectorId: path.sectorId, categoryId: path.categoryId }; render(); setTimeout(function () { scrollQuestionById(a.id); }, 50); }); body.appendChild(tr); }); }
+    function exportFullCSV() {
+      var hdr = [
+        'StoreName', 'Auditor', 'Manager', 'AreaManager', 'Date',
+        'Sector', 'Category', 'QuestionID', 'Question', 'Answer', 'Weight',
+        'Comment', 'PhotoPresent', 'PhotoThumbPresent',
+        'AP Enabled', 'AP Status', 'AP Description', 'PersonResponsible', 'ActionNeeded', 'ClosedOn', 'Critical'
+      ];
+      var lines = [hdr.join(',')];
+      var store = $('#storeName').value.trim();
+      var aud = $('#auditorName').value.trim();
+      var man = $('#storeManager').value.trim();
+      var areaMan = $('#areaManager').value.trim();
+      var d = $('#auditDate').value || new Date().toISOString().slice(0, 10);
+      function q(s) { return '"' + String(s == null ? '' : s).replace(/"/g, '""').replace(/\n/g, ' ') + '"'; }
+      for (var sid in state.sectors) {
+        var sec = state.sectors[sid];
+        (sec.categories || []).forEach(function (cat) {
+          (cat.questions || []).forEach(function (qn) {
+            if (qn.answer === 'Pass' || qn.answer === 'Fail') {
+              var action = qn.action || {};
+              lines.push([
+                q(store), q(aud), q(man), q(areaMan), q(d),
+                q(sec.title), q(cat.name), q(qn.id), q(qn.text), q(qn.answer), q(qn.weight),
+                q(qn.comment || ''), q(qn.photo ? 'Yes' : ''), q(qn.photoThumb_removed ? 'Yes' : ''),
+                q(action.enabled ? 'Yes' : 'No'), q(action.status || ''), q(action.description || ''), q(action.person || ''), q(action.actionNeeded || ''), q(action.closedOn || ''), q(action.critical ? 'Yes' : 'No')
+              ].join(','));
+            }
+          });
+        });
+      }
+      if (lines.length === 1) {
+        alert('No Pass/Fail answers found.');
+        return;
+      }
+      download(lines.join('\n'), 'full_answers_' + safeName(store) + '_' + (d || 'date') + '.csv', 'text/csv;charset=utf-8');
+    }
+    function exportActionPlanCSV() {
+      var cols = [
+        'Store Name', 'Store Email', 'Auditor', 'Manager', 'Date',
+        'Sector', 'Category', 'Sector Score', 'Category Score',
+        'Question ID', 'Question', 'Answer', 'Weight',
+        'Question Score', 'Question Max Score',
+        'Total Score', 'Max Score', 'Overall %',
+        'Description', 'Person responsible', 'Action Needed', 'Status',
+        'Closed On', 'How action was closed', 'Extra Comment',
+        'Photo Full', 'Photo Thumb', 'Extra Photo Full', 'Extra Photo Thumb',
+        'Person Email', 'Audit Email Sent',
+        'Area Manager', 'Critical'
+      ];
+      var lines = [cols.join(',')];
+      var store = $('#storeName').value.trim();
+      var storeEmail = (document.getElementById('storeSelector') && document.getElementById('storeSelector').value) ? document.getElementById('storeSelector').value.trim() : '';
+      var aud = $('#auditorName').value.trim();
+      var man = $('#storeManager').value.trim();
+      var areaMan = $('#areaManager').value.trim();
+      var d = $('#auditDate').value || new Date().toISOString().slice(0, 10);
+      function q(s) { return '"' + String(s == null ? '' : s).replace(/"/g, '""').replace(/\n/g, ' ') + '"'; }
+      function yn(v) { return v ? 'Yes' : ''; } // never export URLs; only yes/blank
+      var rows = getAPRowsOnly();
+      rows.forEach(function (r) {
+        var row = {
+          'Store Name': store,
+          'Store Email': storeEmail,
+          'Auditor': aud,
+          'Manager': man,
+          'Date': d,
+          'Sector': r.sector || '',
+          'Category': r.category || '',
+          'Sector Score': (r.sectorScore == null ? '' : r.sectorScore),
+          'Category Score': (r.categoryScore == null ? '' : r.categoryScore),
+          'Question ID': r.questionId || '',
+          'Question': r.question || '',
+          'Answer': r.answer || '',
+          'Weight': (r.weight == null ? '' : r.weight),
+          'Question Score': (r.questionScore == null ? '' : r.questionScore),
+          'Question Max Score': (r.maxQuestionScore == null ? '' : r.maxQuestionScore),
+          'Total Score': (r.totalScore == null ? '' : r.totalScore),
+          'Max Score': (r.maxScore == null ? '' : r.maxScore),
+          'Overall %': (r.pct == null ? '' : (String(r.pct).indexOf('%') > -1 ? r.pct : (r.pct + '%'))),
+          'Description': r.apDescription || '',
+          'Person responsible': r.apPerson || '',
+          'Action Needed': r.apAction || '',
+          'Status': r.apStatus || '',
+          'Closed On': r.apClosedOn || '',
+          'How action was closed': r.apHowClosed || '',
+          'Extra Comment': (r.extraComment || r.generalComment || ''),
+          'Photo Full': yn(r.photo),
+          'Photo Thumb': yn(r.photoThumb_removed),
+          'Extra Photo Full': yn(r.extraPhoto),
+          'Extra Photo Thumb': yn(r.extraPhotoThumb),
+          'Person Email': '',
+          'Audit Email Sent': '',
+          'Area Manager': areaMan,
+          'Critical': r.critical ? 'Yes' : 'No'
+        };
+        lines.push(cols.map(function (h) { return q(row[h]); }).join(','));
+      });
+      if (lines.length === 1) {
+        alert('No Action Plan items found.');
+        return;
+      }
+      download(lines.join('\n'), 'action_plan_' + safeName(store) + '_' + (d || 'date') + '.csv', 'text/csv;charset=utf-8');
+    }
+    function exportAPJson() {
+      var rows = getAPRowsOnly();
+      if (!rows.length) {
+        alert('No Action Plan items found.');
+        return;
+      }
+      var store = $('#storeName').value.trim();
+      var storeEmail = (document.getElementById('storeSelector') && document.getElementById('storeSelector').value) ? document.getElementById('storeSelector').value.trim() : '';
+      var aud = $('#auditorName').value.trim();
+      var man = $('#storeManager').value.trim();
+      var areaMan = $('#areaManager').value.trim();
+      var d = $('#auditDate').value || new Date().toISOString().slice(0, 10);
+      var dateSlug = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d.slice(8, 10) + d.slice(5, 7) + d.slice(0, 4) : (d.replace(/[^0-9]/g, '') || 'date');
+      function yn(v) { return v ? 'Yes' : ''; } // never export URLs; only yes/blank
+      var cols = [
+        'Store Name', 'Store Email', 'Auditor', 'Manager', 'Date',
+        'Sector', 'Category', 'Sector Score', 'Category Score',
+        'Question ID', 'Question', 'Answer', 'Weight',
+        'Question Score', 'Question Max Score',
+        'Total Score', 'Max Score', 'Overall %',
+        'Description', 'Person responsible', 'Action Needed', 'Status',
+        'Closed On', 'How action was closed', 'Extra Comment',
+        'Photo Full', 'Photo Thumb', 'Extra Photo Full', 'Extra Photo Thumb',
+        'Person Email', 'Audit Email Sent',
+        'Area Manager', 'Critical'
+      ];
+      var exportRows = rows.map(function (r) {
+        var base = {
+          'Store Name': store,
+          'Store Email': storeEmail,
+          'Auditor': aud,
+          'Manager': man,
+          'Date': d,
+          'Sector': r.sector || '',
+          'Category': r.category || '',
+          'Sector Score': (r.sectorScore == null ? '' : r.sectorScore),
+          'Category Score': (r.categoryScore == null ? '' : r.categoryScore),
+          'Question ID': r.questionId || '',
+          'Question': r.question || '',
+          'Answer': r.answer || '',
+          'Weight': (r.weight == null ? '' : r.weight),
+          'Question Score': (r.questionScore == null ? '' : r.questionScore),
+          'Question Max Score': (r.maxQuestionScore == null ? '' : r.maxQuestionScore),
+          'Total Score': (r.totalScore == null ? '' : r.totalScore),
+          'Max Score': (r.maxScore == null ? '' : r.maxScore),
+          'Overall %': (r.pct == null ? '' : (String(r.pct).indexOf('%') > -1 ? r.pct : (r.pct + '%'))),
+          'Description': r.apDescription || '',
+          'Person responsible': r.apPerson || '',
+          'Action Needed': r.apAction || '',
+          'Status': r.apStatus || '',
+          'Closed On': r.apClosedOn || '',
+          'How action was closed': r.apHowClosed || '',
+          'Extra Comment': (r.extraComment || r.generalComment || ''),
+          'Photo Full': yn(r.photo),
+          'Photo Thumb': yn(r.photoThumb_removed),
+          'Extra Photo Full': yn(r.extraPhoto),
+          'Extra Photo Thumb': yn(r.extraPhotoThumb),
+          'Person Email': '',
+          'Audit Email Sent': '',
+          'Area Manager': areaMan,
+          'Critical': r.critical ? 'Yes' : 'No'
+        };
+        // Return object with keys inserted in the same order as CSV columns
+        var ordered = {};
+        cols.forEach(function (k) { ordered[k] = base[k]; });
+        return ordered;
+      });
+      var blob = new Blob([JSON.stringify(exportRows, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'action_plan_' + safeName(store) + '_' + dateSlug + '.json';
+      a.click();
+    }
+    // ===== Export HTML (autosave inside export) ===== 
+    function exportHTML() {
+      // Meta 
+      state.meta.store = $('#storeName').value.trim();
+      state.meta.date = $('#auditDate').value || new Date().toISOString().slice(0, 10);
+      state.meta.auditor = $('#auditorName').value.trim();
+      state.meta.manager = $('#storeManager').value.trim();
+      state.meta.areaManager = $('#areaManager').value.trim();
+      // Build runtime payload 
+      var runtimeItems = []; var answeredBySector = new Map();
+      for (var sid in state.sectors) {
+        var sec = state.sectors[sid];
+        (sec.categories || []).forEach(function (cat) {
+          (cat.questions || []).forEach(function (q) {
+            var answered = (q.answer === 'Pass' || q.answer === 'Fail');
+            var a = (q.action && q.action.enabled) ? q.action : null;
+            var hasComment = ((q.comment || '').trim().length > 0);
+            if (answered) {
+              runtimeItems.push({
+                id: q.id, sector: sec.title, category: cat.name, text: q.text, answer: q.answer,
+                apEnabled: !!a, apStatus: a ? a.status : 'Open', apDesc: a ? a.description : '', apPerson: a ? a.person : '',
+                apAction: a ? a.actionNeeded : '', apClosedOn: a ? a.closedOn : '', photoThumb_removed: q.photoThumb_removed || '',
+                apComment: (q.comment || ''), apHowClosed: a && a.howClosed ? a.howClosed : '', extraPhotoThumb: (q.extraPhotoThumb || ''), extraComment: (q.extraComment || '')
+              });
+            } else if (a) {
+              runtimeItems.push({
+                id: q.id, sector: sec.title, category: cat.name, text: q.text, answer: 'NA', apEnabled: true,
+                apStatus: (q.action.status || 'Open'), apDesc: (q.action.description || ''), apPerson: (q.action.person || ''),
+                apAction: (q.action.actionNeeded || ''), apClosedOn: (q.action.closedOn || ''), photoThumb_removed: (q.photoThumb_removed || ''),
+                apComment: (q.comment || ''), apHowClosed: (q.action.howClosed || ''), extraPhotoThumb: (q.extraPhotoThumb || ''), extraComment: (q.extraComment || '')
+              });
+            } else if (hasComment) {
+              runtimeItems.push({
+                id: q.id, sector: sec.title, category: cat.name, text: q.text, answer: 'NA', apEnabled: false,
+                apStatus: 'Open', apDesc: '', apPerson: '', apAction: '', apClosedOn: '', photoThumb_removed: (q.photoThumb_removed || ''),
+                apComment: (q.comment || ''), apHowClosed: '', extraPhotoThumb: (q.extraPhotoThumb || ''), extraComment: (q.extraComment || '')
+              });
+            }
+            // Only push answered questions that have neither AP nor comment 
+            if (answered && !a && !hasComment) {
+              if (!answeredBySector.has(sec.title)) answeredBySector.set(sec.title, new Map());
+              var byCat = answeredBySector.get(sec.title);
+              if (!byCat.has(cat.name)) byCat.set(cat.name, { compliant: [], nonCompliant: [] });
+              var groups = byCat.get(cat.name);
+              if (q.answer === 'Pass') {
+                groups.compliant.push({ text: q.text, photo: q.photo || null });
+              } else if (q.answer === 'Fail') {
+                groups.nonCompliant.push({ text: q.text, photo: q.photo || null });
+              }
+            }
+          });
+        });
+      }
+      // Escaper 
+      function h(s) { var x = String(s == null ? '' : s); return x.replace(/&/g, '&amp;').replace(/\</g, '&lt;').replace(/\>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
+      // Build Answered (no AP, no comment) 
+      var allQHtml = '';
+      if (answeredBySector.size) {
+        answeredBySector.forEach(function (cats, sector) {
+          allQHtml += '<h3 style="margin:12px 0">' + h(sector) + '</h3>' +
+            '<div class="bar"><div class="bar__fill" style="width:0%"></div></div>';
+          cats.forEach(function (groups, cat) {
+            allQHtml += '<h4 style="margin:8px 0 4px">' + h(cat) + '</h4>';
+            if (groups.compliant.length > 0) {
+              allQHtml += '<h5 style="margin:4px 0; color:var(--brand)">Compliant</h5>' +
+                '<table style="border-collapse:collapse;width:100%">' +
+                '<thead><tr><th style="width:72%">Question</th><th style="width:28%">Photo</th></tr></thead><tbody>';
+              groups.compliant.forEach(function (r) {
+                allQHtml += '<tr><td>' + h(r.text) + '</td><td>' + (r.photo ? '<img class="thumb" src="' + r.photo + '" alt="Photo">' : '') + '</td></tr>';
+              });
+              allQHtml += '</tbody></table>';
+            }
+            if (groups.nonCompliant.length > 0) {
+              allQHtml += '<h5 style="margin:4px 0; color:#ef4444">Non-compliant</h5>' +
+                '<table style="border-collapse:collapse;width:100%">' +
+                '<thead><tr><th style="width:72%">Question</th><th style="width:28%">Photo</th></tr></thead><tbody>';
+              groups.nonCompliant.forEach(function (r) {
+                allQHtml += '<tr><td>' + h(r.text) + '</td><td>' + (r.photo ? '<img class="thumb" src="' + r.photo + '" alt="Photo">' : '') + '</td></tr>';
+              });
+              allQHtml += '</tbody></table>';
+            }
+          });
+        });
+      } else {
+        allQHtml = '<div class="meta" style="color:#667085">No answered questions to display.</div>';
+      }
+      var DATA_JSON = safeScriptJSON(runtimeItems);
+      var logo = state.watermark || EMBEDDED_LOGO;
+      var d = state.meta.date, store = state.meta.store, aud = state.meta.auditor, man = state.meta.manager;
+      function __slug(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+      var storageKey = 'birds_export_' + __slug(store) + '_' + __slug(d) + '_' + (Date.now().toString(36));
+      // Template literal export 
+      var html = `<!doctype html> 
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Retail Audit Report</title> 
+<style> 
+:root{ --bg:#0f1318; --card:#0f1a16; --ink:#e6edf3; --muted:#9aa4b2; --border:#1f2a33; --accent:#14532d; --accent2:#10b981; } 
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif} 
+.wrap{max-width:1100px;margin:0 auto;padding:20px}.wm{position:fixed;top:25%;left:50%;transform:translateX(-50%);opacity:.06;z-index:0}.wm img{width:72vh;max-width:90%} 
+.cover{min-height:100vh;display:grid;align-content:center;gap:18px;padding:28px 16px}.cover__panel{background:linear-gradient(135deg,#111827,#0f1a16);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 6px 24px rgba(0,0,0,.06)} 
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:10px}.brand__logo{width:60px;height:60px;border-radius:14px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;overflow:hidden} 
+.brand__logo img{max-width:100%;max-height:100%}.title{font-size:28px;font-weight:800;margin:0;color:#e6edf3}.sub{color:#667085} 
+.score{display:flex;align-items:baseline;gap:10px;margin-top:10px}.score__pct{font-size:72px;font-weight:900;letter-spacing:-2px;background:linear-gradient(90deg,#10b981,#14532d);-webkit-background-clip:text;background-clip:text;color:transparent}.score__band{font-size:18px;font-weight:800} 
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}.meta-card{border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px} 
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}.tile{border:1px solid var(--border);background:#fff;border-radius:12px;padding:12px} 
+.pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;color:#667085} 
+.cover-ap{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}.cover-ap table{border-collapse:collapse;width:100%;margin-top:6px}.cover-ap th,.cover-ap td{border:1px solid var(--border);padding:8px;vertical-align:top}.cover-ap th{text-align:left;background:#f9fcfb} 
+.bar{background:#131920;border:1px solid var(--border);height:8px;border-radius:999px;overflow:hidden}.bar__fill{height:100%;background:linear-gradient(90deg,#10b981,#14532d)}.thumb{max-width:110px;border-radius:8px;border:1px solid var(--border);display:block} 
+.meta{color:#667085}.tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.tools .btn{appearance:none;border:none;border-radius:999px;padding:10px 14px;font-weight:800;background:linear-gradient(90deg,#10b981,#14532d);color:#fff;cursor:pointer}#allQ{display:none}@media print{body{background:#fff}.tools{display:none}} 
+.ap-cards{display:grid;gap:12px;grid-template-columns:1fr}.ap-card{border:1px solid var(--border);background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.06);padding:12px} 
+.ap-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.ap-head__left{display:flex;flex-direction:column;gap:4px}.ap-card__cat{font-size:12px;color:#667085}.ap-card__q{font-weight:800;line-height:1.35} 
+.ap-card__body{display:grid;gap:10px;grid-template-columns:1fr}.ap-field .ap-label{font-size:12px;color:#667085;margin-bottom:2px}.ap-val{white-space:pre-wrap} 
+.apx-toggle{appearance:none;border:none;border-radius:999px;padding:8px 12px;font-weight:800;cursor:pointer}.apx-toggle.open{background:#dcfce7;color:#065f46}.apx-toggle.closed{background:#f0fdf4;color:#14532d} 
+.ap-thumb{width:110px;height:110px;object-fit:cover;border:1px solid var(--border);border-radius:8px;margin-left:12px;flex:0 0 auto} 
+/* Comment cards */.c-cards{display:grid;gap:12px;grid-template-columns:1fr}.c-card{border:1px solid var(--border);background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.06);padding:12px}.c-card__head{font-weight:800;margin-bottom:6px}.c-card__q{font-weight:700} 
+.tools { position: relative; z-index: 50; } 
+.tools .btn { position: relative; z-index: 51; } 
+<style> 
+.cat-head{ position: sticky; top: 56px; z-index: 9; background: var(--card); border-bottom: 1px dashed var(--border); } 
+@media (max-width: 560px){ .answers{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; } .answers label{ justify-content:center; width:100%; } } 
+.answers label{ padding:12px 16px; } 
+.badge{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); border-radius:999px; padding:2px 8px; font-size:12px; color:#374151; background:#fff; } 
+.badge.ap{ border-color:#f59e0b; color:#92400e; background:#fffbeb; } 
+.badge.pic{ border-color:#10b981; color:#14532d; background:#ecfdf5; } 
+.badge.cmt{ border-color:#86efac; color:#065f46; background:#ecfdf5; } 
+.q.collapsed .photo, .q.collapsed .comment, .q.collapsed .ap-fields, .q.collapsed .ap-toggle{ display:none !important; } 
+.q.collapsed{ opacity:.9; } 
+.drawer-card{ border:1px solid var(--border); border-radius:12px; padding:10px; background:#fff; display:flex; flex-direction:column; gap:4px } 
+.drawer-card .t{ font-weight:800 } 
+.drawer-card .m{ color:#667085; font-size:12px } 
+.spinner{ width:18px; height:18px; border-radius:50%; border:2px solid #d1d5db; border-top-color:#10b981; animation:spin .8s linear infinite; display:inline-block } 
+@keyframes spin{to{ transform:rotate(360deg); }} 
+#saveStatus{ background:#ecfdf5; border-color:#86efac; color:#065f46 } 
+#saveStatus.saving{ background:#fff7ed; border-color:#fed7aa; color:#9a3412 } 
+#saveStatus.error{ background:#fee2e2; border-color:#fecaca; color:#991b1b } 
+/* build-only generic hidden default; toggled by applyBuildModeUI */ 
+.build-only{ display:none; } 
+</style> 
+</style> 
+<style> 
+/* --- Modern Sleek Mobile Design Upgrade --- */ 
+body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; } 
+.card { border-radius: 18px; padding: 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); } 
+.tile { border-radius: 16px; padding: 18px; box-shadow: 0 3px 10px rgba(0,0,0,0.07); } 
+.qtitle { font-size: 1.15rem; font-weight: 700; } 
+.answers label { padding: 14px 18px; font-size: 1rem; } 
+.photo label { padding: 16px; font-size: 0.95rem; } 
+.cat-head { padding: 8px 0; border-bottom: 1px solid #e5e7eb; } 
+input, select, textarea { font-size: 1rem; border-radius: 12px; padding: 12px; } 
+/* spacing */ 
+.q { padding-top: 22px; margin-top: 22px; } 
+/* better hit targets */ 
+.btn { min-height: 48px; font-size: 1rem; border-radius: 12px; } 
+</style> 
+<style> 
+/* Merge tweak: clearer question cards */ 
+.q{border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-top:14px;background:var(--card);box-shadow:0 1px 0 rgba(0,0,0,.03)} 
+</style> 
+<style id="charcoal-green-overrides">
+/* Charcoal + Green palette for the audit form */
+:root{ --bg:#0f1318; --card:#0f1a16; --ink:#e6edf3; --muted:#9aa4b2; --border:#1f2a33; --brand:#10b981; --accent:#14532d; --accent2:#10b981; }
+header{ background:#111827; }
+/* Compact, squished controls for mobile */
+.answers label{ padding:8px 10px !important; border-radius:10px; min-height:40px; font-size:0.95rem; }
+.btn.small{ min-height:36px; padding:6px 10px; }
+.q{ padding-top:12px; }
+/* Bottom bar with 6 columns + score pill */
+.mbar{ grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); background: rgba(15,19,24,.98); }
+#mbarScore{ color:#e6edf3; border:2px solid rgba(230,237,243,.25); }
+/* Improve table and cards contrast on dark */
+.card, .tile, .meta-card{ background:#0f1a16; border-color:var(--border); }
+</style>
+
+
+<style id="high-contrast-brand-overrides">
+  :root{
+    --bg:#0b0f14;            /* a touch darker for contrast */
+    --card:#0f1a16;          /* charcoal card */
+    --ink:#f7fafc;           /* near-white text */
+    --muted:#cfd8e3;         /* lighter muted */
+    --border:#2b3944;        /* brighter border for definition */
+    --brand:#10b981;         /* Birds green */
+    --accent:#14532d;        /* deep green */
+    --accent2:#10b981;
+  }
+  body{ color:var(--ink); background:var(--bg); }
+  /* Branded line-drawn Birds background */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1;
+    background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=);
+    background-size:cover; background-position:center; background-repeat:no-repeat;
+    opacity:0.18;          /* subtle but visible */
+    pointer-events:none;
+  }
+  /* Ensure header and sticky elements remain readable */
+  header{ background:#0f172a !important; color:#fff; }
+  header .btn.ghost{ border-color:#94a3b8 !important; color:#e2e8f0 !important; }
+  /* Card & tile clarity */
+  .card, .tile, .meta-card{ background:var(--card) !important; border-color:var(--border) !important; color:var(--ink); }
+  .tile p, .hint, .meta{ color:var(--muted) !important; }
+  /* Answers chips */
+  .answers label{ border-color:#42586a !important; background:#0e161c !important; color:var(--ink) !important; }
+  .answers label.sel, .answers label:has(input:checked){
+    background:linear-gradient(90deg, var(--brand), #34d399) !important;
+    border-color:#34d399 !important; color:#062015 !important; /* dark text because gradient is bright */
+  }
+  /* Buttons */
+  .btn{ background:linear-gradient(90deg,#22c55e,#10b981) !important; color:#062015 !important; font-weight:900; }
+  .btn.ghost{ background:transparent !important; color:#e2e8f0 !important; border:2px solid #94a3b8 !important; }
+  .btn.green{ background:linear-gradient(90deg,#10b981,#34d399) !important; color:#062015 !important; }
+  /* Tables */
+  #apTable th{ background:#0b1220 !important; color:#e5eef7 !important; }
+  #apTable td{ background:#0f1a16 !important; color:var(--ink) !important; }
+  /* Donut text color */
+  #donutText{ fill:var(--ink) !important; }
+  /* Bottom bar */
+  .mbar{ background:rgba(3,7,18,.96) !important; border-top-color:#1f2937 !important; }
+  #mbarScore{ color:#e5f9f0 !important; border-color:#2b3944 !important; }
+  /* Focus rings */
+  :focus-visible{ outline:3px solid #34d399 !important; outline-offset:2px; }
+  /* Exported report: ensure legibility on cover */
+  .cover__panel{ border-color:#22303a !important; }
+  .score__pct{ background:linear-gradient(90deg,#34d399,#10b981); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .brand__logo{ border-color:#2b3944 !important; }
+</style>
+
+
+<style id="brand-fix-v2">
+  /* Ensure base bg & stacking so brand bg is visible even with watermark */
+  html, body { background: var(--bg) !important; }
+  /* Use ::after for brand pattern so it can coexist with existing ::before watermark */
+  body::after{
+    content:""; position:fixed; inset:0; z-index:-3; /* behind watermark (::before at -1) and content */
+    background-image: inherit; /* will be overridden below */
+    pointer-events:none; opacity:0.22; /* slightly stronger so visible */
+  }
+  /* Rebind our brand SVG specifically here (duplicate of previous to ensure load order wins) */
+  body::after{ background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=);
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+  }
+  /* Make all text readable regardless of legacy white backgrounds */
+  .card, .tile, .meta-card, .q { color: var(--ink) !important; }
+  .ap-card, .c-card { background: var(--card) !important; color: var(--ink) !important; border-color: var(--border) !important; }
+  /* Inputs keep white background for legibility; force dark text inside */
+  input[type=text], input[type=date], select, textarea { background:#ffffff !important; color:#0f172a !important; border-color:#9fb3c8 !important; }
+  ::placeholder { color:#64748b !important; }
+  /* Remove any accidental highlight backgrounds on labels/titles */
+  .ap-label, .ap-card__cat, .ap-card__q, .cat-title, label { background: transparent !important; color: inherit; }
+  /* Answer chips: increase text contrast on selected */
+  .answers label.sel, .answers label:has(input:checked) { color:#0b1f14 !important; text-shadow: none !important; }
+  /* Tables in Action Plan summary area */
+  #apTable th { background:#0d1620 !important; color:#e5eef7 !important; }
+  #apTable td { background:#0f1a16 !important; color:var(--ink) !important; }
+  /* Ensure wrap sits above both bg layers */
+  .wrap { position: relative; z-index: 1; }
+</style>
+
+
+<style id="birds-bg-and-badges">
+  html, body { height: 100%; }
+  body{
+        background-repeat: repeat;
+    background-size: 400px 400px;
+    background-attachment: fixed;
+    background-color: #0d0f12;
+  }
+  body::before, 
+  .card, .tile, .meta-card, #actionPanel, table, header, footer { background-clip: padding-box; }
+  .status{ display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px; font-weight:900; letter-spacing:.4px; text-transform:uppercase; font-size:12px; line-height:1; }
+  .status svg{ width:14px; height:14px; }
+  .status-open{ color:#fff; background:#2dbb63; box-shadow:inset 0 -2px 0 rgba(0,0,0,.12); }
+  .status-closed{ color:#fff; background:#2e3338; box-shadow:inset 0 -2px 0 rgba(0,0,0,.12); }
+  td.status-cell{ white-space:nowrap; }
+  @media print{ body{ background:none !important; } }
+</style>
+
+
+<style id="birds-overrides-v2">
+  header{
+    background: linear-gradient(0deg, rgba(13,15,18,0.55), rgba(13,15,18,0.55)) !important;
+    -webkit-backdrop-filter: saturate(120%) blur(4px);
+    backdrop-filter: saturate(120%) blur(4px);
+    border-bottom: 2px solid #14532d;
+  }
+  .mbar{ background: rgba(255,255,255,.95); }
+  @media (prefers-color-scheme: dark){ .mbar{ background: rgba(15,19,24,.90); } }
+  .btn{ border-width:3px !important; text-transform:uppercase; letter-spacing:.4px; }
+  .status{ padding:8px 14px !important; font-size:13px !important; box-shadow:0 2px 8px rgba(0,0,0,.18), inset 0 -2px 0 rgba(0,0,0,.18) !important; }
+  .status-open{ background:#16a34a !important; }
+  .status-closed{ background:#374151 !important; }
+  #apTable tr.is-open > td{ border-top:4px solid #16a34a; }
+  #apTable tr.is-closed > td{ border-top:4px solid #6b7280; }
+  .tile.is-open{ box-shadow: inset 0 4px 0 #16a34a; }
+  .tile.is-closed{ box-shadow: inset 0 4px 0 #6b7280; }
+  .action-card.is-open{ box-shadow: inset 0 4px 0 #16a34a; }
+  .action-card.is-closed{ box-shadow: inset 0 4px 0 #6b7280; }
+</style>
+
+
+<style id='hide-watermark-elements'>
+#logoPicker,
+label.btn.ghost:has(#logoPicker),
+#wmStatus {
+  display: none !important;
+}
+</style>
+
+
+<style id='ux-mini-tweaks'>
+/* Clearer category affordance */
+.cat-head{ cursor:pointer }
+.cat-head .btn.ghost{ min-width:108px }
+/* Larger touch target for answers */
+.answers label{ min-height:44px }
+/* Reduce repaint cost on scroll elements */
+.mbar, header{ will-change: transform }
+</style>
+
+
+<style>
+/* Transparent header */
+header { background: transparent !important; backdrop-filter:none !important; box-shadow:none !important; border:none !important; }
+</style>
+<style>
+  @media print {
+    /* Target the images and force them to break out of thumbnail sizing */
+    img, .photo-preview img, .audit-image, .thumb, canvas {
+      max-width: 100% !important;
+      width: auto !important;
+      height: auto !important;
+      page-break-inside: avoid !important;
+      display: block !important;
+    }
+  }
+</style>
+</head> 
+<body> 
+ <div class="wm"><img src="${logo}" alt="Watermark"></div> 
+ <div class="wrap"> 
+ <section class="cover"><div class="cover__panel"> 
+ <div class="brand"><div class="brand__logo"><img src="${logo}" alt="Brand"></div> 
+ <div><h1 class="title">Birds Audit Report</h1><div class="sub"><b>Date:</b> ${h(d)}</div></div></div> 
+ <div class="score"><div class="score__pct" id="overallPct">0%</div><div class="score__band" id="overallBand"></div></div><div class="scorebar"><div class="scorebar__fill" id="scoreFill"></div></div> 
+ <div class="meta-grid"><div class="meta-card"><b>Store:</b> ${h(store)}</div><div class="meta-card"><b>Auditor:</b> ${h(aud)}</div><div class="meta-card"><b>Manager:</b> ${h(man)}</div></div> 
+ <div class="tools"><button class='btn' id='btnPrint'>Print</button><button class="btn" id="btnToggleAllQ">All questions</button><button class="btn" id="btnClearExport" style='display:none'>Clear saved data</button></div> 
+ <div class="tiles" id="tiles"></div> 
+ <div class="cover-ap"><h2 id="ap_section" style="margin:0 0 8px">Action Plan</h2><div class="meta">Open/Close items to update the score instantly.</div><div id="apHost"></div></div> 
+ <div class="cover-ap"><h2 style="margin:12px 0 8px">Comments</h2><div id="commentHost"></div></div> 
+ </div></section> 
+ <section id="allQ"><h2>All answered questions</h2><div id="allQHost" class="meta">${allQHtml}</div></section> 
+ </div> 
+ <div id="saveToast" style="position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:rgba(20,20,20,.85);color:#fff;padding:10px 14px;border-radius:999px;font-weight:800;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:9999">Saved ✓</div> 
+ <script id="payload" type="application/json">${DATA_JSON}</` + `script>
+ <script>(function(){ 
+ var RAW=document.getElementById('payload'); if(!RAW) return; var DATA=[]; try{ DATA=JSON.parse(RAW.textContent||'[]'); }catch(_){ DATA=[]; } 
+ var STORAGE_KEY='${storageKey}'; 
+ function band(p){ return p>=95?{l:'Excellent',c:'green'}: p>=90?{l:'Good Work',c:'green'}: p>=80?{l:'Pass',c:'#ff9800'} : {l:'Action Needed',c:'red'}; } 
+ function scored(it){ return ((it.answer==='Pass' && (!it.apEnabled || it.apStatus!=='Open')) 
+ || (it.answer==='Fail' && it.apEnabled && it.apStatus==='Closed')); } 
+ function summary(){ var m=new Map(),A=0,S=0; DATA.forEach(function(it){ if(it.answer==='Pass' || it.answer==='Fail'){ A++; if(scored(it)) S++; if(!m.has(it.sector)) m.set(it.sector,{a:0,s:0}); var v=m.get(it.sector); v.a++; if(scored(it)) v.s++; m.set(it.sector,v);} }); var rows=[]; m.forEach(function(v,k){ rows.push({s:k,p:v.a?Math.round(100*v.s/v.a):0}); }); return {pct:A?Math.round(100*S/A):0, rows:rows}; } 
+ function mk(t,a,txt){ var n=document.createElement(t); if(a){ for(var k in a){ if(k==='class') n.className=a[k]; else n.setAttribute(k,a[k]); } } if(txt!=null) n.textContent=txt; return n; } 
+ function clear(n){ while(n.firstChild) n.removeChild(n.firstChild); } 
+ function toastSaved(){ var t=document.getElementById('saveToast'); if(!t) return; t.style.opacity='1'; clearTimeout(toastSaved._t); toastSaved._t=setTimeout(function(){ t.style.opacity='0'; }, 1200); } 
+ function renderHeader(){ var s=summary(); var o=document.getElementById('overallPct'); if(o) o.textContent=s.pct+'%'; var bd=document.getElementById('overallBand'); if(bd){ var b=band(s.pct); bd.textContent=b.l; bd.style.color=b.c; } var fill=document.getElementById('scoreFill'); if(fill){ fill.style.width = s.pct + '%'; } var tiles=document.getElementById('tiles'); if(tiles){ clear(tiles); s.rows.forEach(function(r){ var b=band(r.p); var card=mk('div',{'class':'tile'}); var t1=mk('div',null,r.s); t1.style.cssText='font-weight:700;color:#374151'; card.appendChild(t1); var t2=mk('div',null,r.p+'%'); t2.style.cssText='font-size:28px;font-weight:900'; card.appendChild(t2); var t3=mk('div',null,b.l); t3.style.cssText='font-size:13px;color:'+b.c; card.appendChild(t3); tiles.appendChild(card); }); } } 
+ // STRICT: only apEnabled === true in AP 
+ function renderAP(){ var host=document.getElementById('apHost'); if(!host) return; var items = DATA.filter(function(x){ return x.apEnabled === true; }); var H=document.getElementById('ap_section'); if(H) H.textContent='Action Plan ('+items.length+')'; clear(host); if(!items.length){ host.appendChild(mk('div',{'class':'meta'},'No Action Plan items.')); return; } var wrap=mk('div',{'class':'ap-cards'}); items.forEach(function(a){ var card=mk('div',{'class':'ap-card','data-qid':a.id}); var head=mk('div',{'class':'ap-card__head'}); var headLeft=mk('div',{'class':'ap-head__left'}); headLeft.appendChild(mk('div',{'class':'ap-card__cat'}, (a.category||''))); headLeft.appendChild(mk('div',{'class':'ap-card__q'}, (a.text||''))); head.appendChild(headLeft); var img=(a.photoThumb_removed? mk('img',{'class':'ap-thumb','src':a.photoThumb_removed,'alt':'Photo'}) : null); if(img) head.appendChild(img); card.appendChild(head); var body=mk('div',{'class':'ap-card__body'}); var d1=mk('div',{'class':'ap-field'}); d1.appendChild(mk('div',{'class':'ap-label'},'Description')); d1.appendChild(mk('div',{'class':'ap-val'}, (a.apDesc||''))); body.appendChild(d1); var d2=mk('div',{'class':'ap-field'}); d2.appendChild(mk('div',{'class':'ap-label'},'Person')); d2.appendChild(mk('div',{'class':'ap-val'}, (a.apPerson||''))); body.appendChild(d2); var d3=mk('div',{'class':'ap-field'}); d3.appendChild(mk('div',{'class':'ap-label'},'Action')); d3.appendChild(mk('div',{'class':'ap-val'}, (a.apAction||''))); var how=mk('div',{'class':'how-wrap'}); how.appendChild(mk('div',{'class':'how-label'},'How action was closed')); var ta=document.createElement('textarea'); ta.setAttribute('class','apx-howclosed'); ta.setAttribute('data-qid',a.id); ta.setAttribute('placeholder','Briefly describe how the action was closed'); ta.value=a.apHowClosed||''; if(a.apStatus==='Closed'){ ta.disabled=true; } else { ta.removeAttribute('disabled'); } ta.addEventListener('input', function(){ var qid=this.getAttribute('data-qid'); var entry=DATA.find(function(x){return x.id===qid;}); if(entry){ entry.apHowClosed=this.value; persist(); } }); how.appendChild(ta); d3.appendChild(how); body.appendChild(d3); card.appendChild(body); var foot=mk('div',{'class':'ap-card__foot'}); var btn=mk('button',{'class':'apx-toggle '+(a.apStatus==='Closed'?'closed':'open'),'data-qid':a.id}, (a.apStatus||'Open')); foot.appendChild(btn); var cd=mk('div',{'class':'ap-closed'}); cd.appendChild(mk('span',{'class':'ap-label'},'Closed on')); cd.appendChild(mk('span',{'class':'apx-closedOn'}, (a.apClosedOn ? a.apClosedOn : (a.apStatus==='Closed'? new Date().toISOString().slice(0,10): '')) )); foot.appendChild(cd); card.appendChild(foot); wrap.appendChild(card); }); host.appendChild(wrap); } 
+ function renderComments(){ var host=document.getElementById('commentHost'); if(!host) return; clear(host); var items=DATA.filter(function(x){ return (x.apComment && x.apComment.trim()) 
+|| x.extraPhotoThumb 
+|| (x.extraComment && x.extraComment.trim()); }); if(!items.length){ host.appendChild(mk('div',{'class':'meta'},'No comments.')); return; } 
+ var bySector=new Map(); items.forEach(function(it){ if(!bySector.has(it.sector)) bySector.set(it.sector, new Map()); var byCat=bySector.get(it.sector); if(!byCat.has(it.category)) byCat.set(it.category, []); byCat.get(it.category).push(it); }); 
+ var wrap=mk('div',{'class':'c-cards'}); 
+ bySector.forEach(function(cmap, sector){ cmap.forEach(function(list, cat){ list.forEach(function(c){ var card=mk('div',{'class':'c-card'}); card.appendChild(mk('div',{'class':'c-card__head'}, sector+' / '+cat)); card.appendChild(mk('div',{'class':'c-card__q'}, c.text||'')); card.appendChild(mk('div',{'class':'ap-val'}, c.apComment||'')); if(c.photoThumb_removed){ var ph=document.createElement('div'); var im=document.createElement('img'); im.src=c.photoThumb_removed; im.className='ap-thumb'; ph.appendChild(im); card.appendChild(ph);} 
+ if(c.extraComment && c.extraComment.trim()){ card.appendChild(mk('div',{'class':'ap-val'}, c.extraComment)); } 
+ wrap.appendChild(card); }); }); }); 
+ host.appendChild(wrap); 
+ } 
+ function persist(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); toastSaved(); }catch(e){} } 
+ try{ var draft=localStorage.getItem(STORAGE_KEY); if(draft){ var incoming=JSON.parse(draft); var byId=new Map(); DATA.forEach(function(x){ byId.set(x.id,x); }); incoming.forEach(function(nx){ var cur=byId.get(nx.id); if(cur){ for(var k in nx){ cur[k]=nx[k]; } } }); } }catch(_){ } 
+ try{ renderHeader(); renderAP(); renderComments(); }catch(_){ } 
+ document.addEventListener('click', function(e){ var btn=e.target && e.target.closest? e.target.closest('.apx-toggle') : null; if(!btn) return; var card=btn.closest('.ap-card'); var qid=btn.getAttribute('data-qid'); var entry=DATA.find(function(x){ return x.id===qid; }); if(!entry) return; var next=(entry.apStatus==='Closed'?'Open':'Closed'); entry.apEnabled=true; entry.apStatus=next; var cell=card?card.querySelector('.apx-closedOn'):null; if(next==='Closed'){ if(cell && !cell.textContent.trim()) cell.textContent=new Date().toISOString().slice(0,10); if(!entry.apClosedOn){ entry.apClosedOn = cell?cell.textContent : new Date().toISOString().slice(0,10); } } else { if(cell) cell.textContent=''; entry.apClosedOn=''; } btn.classList.toggle('closed', next==='Closed'); btn.classList.toggle('open', next!=='Closed'); btn.textContent=next; renderHeader(); persist(); }); 
+ var btn=document.getElementById('btnToggleAllQ'); var bx=document.getElementById('btnClearExport'); if(bx){ bx.addEventListener('click', function(){ try{ 
+ var keys=[]; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k && k.indexOf('birds_export_')===0) keys.push(k); } 
+ keys.forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} }); 
+ }catch(e){}; toastSaved && toastSaved(); setTimeout(function(){ location.reload(); }, 150); }); } if(btn){ btn.addEventListener('click', function(){ var s=document.getElementById('allQ'); s.style.display = s.style.display!=='none' ? 'none':'block'; }); } 
+var p=document.getElementById('btnPrint'); if(p){ p.addEventListener('click', function(){ window.print(); }); } 
+})(); 
+ </`+ `script>`;
+      var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      var a = document.createElement('a'); var safe = (state.meta.store || 'audit').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      a.href = URL.createObjectURL(blob); a.download = 'audit-report-' + (safe || 'report') + '.html'; document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    // ===== PDF Export (Print-optimized) ===== 
+    function exportPDF() {
+
+      // ✅ Ensure latest Auditor Feedback is captured before PDF generation
+      try {
+        var af = document.getElementById('auditorFeedback');
+        if (af) state.meta.auditorFeedback = af.value || '';
+      } catch (e) {}
+
+      state.meta.store = $('#storeName').value.trim();
+      state.meta.date = $('#auditDate').value || new Date().toISOString().slice(0, 10);
+      state.meta.auditor = $('#auditorName').value.trim();
+      state.meta.manager = $('#storeManager').value.trim();
+      state.meta.areaManager = $('#areaManager').value.trim();
+
+      var store = state.meta.store, aud = state.meta.auditor, man = state.meta.manager, areaMan = state.meta.areaManager, d = state.meta.date;
+      var logo = state.watermark || EMBEDDED_LOGO;
+
+      
+// Calculate overall score (consistent: weighted + critical penalties; ignores untouched sectors)
+var overall = computeFullScore();
+var pct = overall.pct;
+
+
+      // Build PDF HTML with print styles and the new BACK button
+      var pdfHTML = '<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Retail Audit Report</title><link rel="icon" href="' + logo + '"/><style>@page{margin:0.6in;size:A4 portrait;} html,body{box-sizing:border-box;} body{font-family:Arial,sans-serif;margin:0;padding:0;background:#e5e7eb;color:#333;} .page{page-break-after:always;page-break-inside:avoid;padding:0.6in 0;max-width:900px;margin:0 auto;background:#fff;box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px;} .page:last-child{page-break-after:auto;} .header-block{text-align:center;margin-bottom:0.8in;border-bottom:2px solid #14532d;padding-bottom:0.5in;} .logo{max-width:110px;height:auto;margin-bottom:0.3in;} .title{font-size:30px;font-weight:bold;margin:0.1in 0;color:#111;} .subtitle{font-size:13px;color:#666;margin-top:0.2in;} .meta-info{display:grid;grid-template-columns:1fr 1fr;gap:0.4in;margin-top:0.3in;font-size:12px;} .meta-row{padding:0.11in;border:1px solid #ddd;border-radius:5px;background:#f9fdf9;} .meta-row b{display:block;color:#14532d;font-weight:bold;} .scorecard{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.6in;align-items:center;margin:0.5in 0;} .score-display{text-align:center;} .score-pct{font-size:50px;font-weight:bold;color:#14532d;} .score-band{font-size:18px;color:#666;margin-top:0.2in;} .section-title{font-size:18px;font-weight:bold;color:#14532d;margin-top:0.5in;margin-bottom:0.25in;border-bottom:1px solid #ddd;padding-bottom:0.12in;} .ap-item{margin-bottom:0.35in;border:1px solid #eee;padding:0.24in;page-break-inside:avoid;border-radius:8px;background:#fafafa;box-shadow:0 2px 6px rgba(0,0,0,0.06);display:flex;gap:0.5em;align-items:flex-start;} .ap-content{flex:1;min-width:0;} .ap-image-box{flex:0 0 46%;max-width:46%;margin-left:0.2in;text-align:center;display:flex;align-items:center;justify-content:center;} .ap-photo{width:100%;max-width:100%;max-height:4.4in;border:1px solid #ddd;border-radius:6px;object-fit:contain;background:#fff;image-rendering:auto;} .comment-block{margin-bottom:0.35in;border-left:3px solid #10b981;padding-left:0.24in;page-break-inside:avoid;border-radius:6px;background:#f9f9f9;padding:0.24in;} .comment-q{font-weight:bold;font-size:14px;margin-bottom:0.14in;} .comment-text{font-size:13px;color:#555;margin-bottom:0.14in;line-height:1.5;} .comment-photo{width:100%;max-width:3.5in;max-height:3.9in;border:1px solid #ddd;margin-top:0.12in;border-radius:6px;object-fit:contain;background:#fff;image-rendering:auto;} .answer-list{font-size:13px;} .answer-item{margin-bottom:0.28in;padding:0.14in;background:#f9f9f9;border-left:3px solid #10b981;border-radius:6px;} .answer-sector{font-weight:bold;color:#14532d;margin-top:0.35in;margin-bottom:0.15in;font-size:15px;} .answer-cat{margin-left:0.2in;font-weight:bold;color:#444;font-size:13px;margin-bottom:0.1in;} .answer-text{margin-left:0.3in;font-size:12px;color:#333;line-height:1.5;} .page-break{page-break-after:always;} .sector-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.35in;margin-bottom:0.5in;} .sector-card{border:2px solid #14532d;border-radius:12px;padding:0.32in;text-align:center;background:#f3f8f4;box-shadow:0 2px 6px rgba(0,0,0,0.05);} .sector-card.failed{border-color:#dc2626;background:#fff2f1;} .sector-name{font-weight:bold;font-size:15px;color:#14532d;margin-bottom:0.1in;} .sector-card.failed .sector-name{color:#b91c1c;} .sector-score{font-size:24px;font-weight:bold;color:#14532d;} .sector-card.failed .sector-score{color:#b91c1c;} .sector-failed-note{font-size:11px;font-weight:600;color:#991b1b;margin-top:0.2in;} .sector-answered{font-size:11px;color:#666;} .ap-item.critical{border-color:#dc2626;background:#fff2f2;} .critical-banner{color:#dc2626;font-size:11px;font-weight:700;margin-bottom:0.08in;text-transform:uppercase;letter-spacing:0.5px;display:inline-block;padding:0;background:none;border:none;} ';
+
+      // UI additions for returning to the app
+      pdfHTML += '@media print { .no-print { display: none !important; } body { background: #fff !important; } .page { box-shadow: none !important; margin: 0 !important; padding: 0 !important; } } ';
+      pdfHTML += '.no-print-bar { background: #111827; padding: 16px; text-align: center; font-family: sans-serif; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin-bottom: 20px; width: 100%; } ';
+      pdfHTML += '.btn-back { background: #10b981; color: #fff; border: none; padding: 14px 24px; font-size: 16px; font-weight: 800; border-radius: 8px; cursor: pointer; max-width: 400px; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); } ';
+
+      pdfHTML += '</style></head><body>';
+      
+      // The Back / Print Bar
+      pdfHTML += '<div class="no-print no-print-bar">';
+      pdfHTML += '<button class="btn-back" onclick="window.close(); if(history.length>1){history.back();} else {window.location.href=window.location.pathname;}">🔙 Return to App</button>';
+      pdfHTML += '<div style="color: #9ca3af; font-size: 12px; margin-top: 10px;">Tap the Print button above to save or print this report (required on iPad).</div>';
+      pdfHTML += '</div>';
+
+      // Page 1: Scorecard & AP Summary
+      pdfHTML += '<div class="page">';
+      pdfHTML += '<div class="header-block">';
+      if (logo) pdfHTML += '<img class="logo" src="' + logo + '" alt="Logo"/>';
+      pdfHTML += '<div class="title">Retail Audit Report</div>';
+      pdfHTML += '<div style="font-size:12px;color:#666;">' + new Date(d).toLocaleDateString() + '</div>';
+      pdfHTML += '</div>';
+
+      
+var anySectorFailed = false;
+var sectorScores = [];
+for (var sid in state.sectors) {
+  var m = sectorMetrics(sid);
+  if (!m.answered) continue; // ✅ PDF only shows answered sectors
+  var sectorPct = m.penalisedPct;
+  var failed = m.failed;
+  if (failed) anySectorFailed = true;
+  sectorScores.push({
+    name: state.sectors[sid].title,
+    pct: sectorPct,
+    answered: m.answered,
+    failed: failed,
+    criticalCount: m.criticalCount,
+    penalty: m.penalty,
+    basePct: Math.round(m.basePct)
+  });
+}
+
+
+      pdfHTML += '<div class="scorecard">';
+      pdfHTML += '<div class="score-display"><div class="score-pct">' + pct + '%</div><div class="score-band">' + (anySectorFailed ? 'Overall Score (FAILED)' : 'Overall Score') + '</div></div>';
+      pdfHTML += '<div class="meta-info">';
+      pdfHTML += '<div class="meta-row"><b>Store:</b> ' + esc(store) + '</div>';
+      pdfHTML += '<div class="meta-row"><b>Auditor:</b> ' + esc(aud) + '</div>';
+      pdfHTML += '<div class="meta-row"><b>Store Manager:</b> ' + esc(man) + '</div>';
+      pdfHTML += '<div class="meta-row"><b>Area Manager:</b> ' + esc(areaMan) + '</div>';
+      pdfHTML += '</div></div>';
+
+      // Sector Scores
+      pdfHTML += '<div class="section-title">Sector Scores</div>';
+      pdfHTML += '<div class="sector-cards">';
+      sectorScores.forEach(function (s) {
+        var failedClass = s.failed ? ' failed' : '';
+        pdfHTML += '<div class="sector-card' + failedClass + '"><div class="sector-name">' + esc(s.name) + '</div>';
+        pdfHTML += '<div class="sector-score">' + (s.failed ? 'FAILED' : s.pct + '%') + '</div>';
+pdfHTML += (s.failed ? '' : (s.penalty ? '<div style=\"font-size:11px;color:#92400e;font-weight:700;margin-top:0.08in;\">Critical penalty applied: -' + s.penalty + '% (base ' + s.basePct + '%)</div>' : ''));
+        if (s.failed) { pdfHTML += '<div class="sector-failed-note">IMMEDIATE ACTION NEEDED</div>'; }
+        pdfHTML += '<div class="sector-answered">(' + s.answered + ' answered' + (s.criticalCount ? ', ' + s.criticalCount + ' critical' : '') + ')</div></div>';
+      });
+      pdfHTML += '</div>';
+      if (anySectorFailed) { pdfHTML += '<div style="color:#dc2626;font-size:12px;margin-top:0.2in;">One or more sectors have 3+ critical actions. Failed sectors are marked FAILED, but overall score reflects points from other sectors.</div>'; }
+
+      
+  // ✅ Auditor Feedback / Audit Summary (Now purely optional)
+  if (state.meta.auditorFeedback && state.meta.auditorFeedback.trim().length > 0) {
+    pdfHTML += `
+      <div class="section-title">Audit Summary</div>
+      <div style="
+        font-size:13px;
+        line-height:1.5;
+        margin-bottom:0.4in;
+        white-space:pre-wrap;
+      ">
+        ${esc(state.meta.auditorFeedback)}
+      </div>
+    `;
+  }
+
+// Action Plan Summary
+      pdfHTML += '<div class="section-title">Action Plan Summary</div>';
+      var apItems = getActionItems();
+      // Sort critical actions first
+      apItems.sort(function (a, b) { return (b.action.critical ? 1 : 0) - (a.action.critical ? 1 : 0); });
+      if (apItems.length === 0) {
+        pdfHTML += '<p style="color:#999;">No action plans.</p>';
+      } else {
+        apItems.forEach(function (a) {
+          var criticalClass = a.action.critical ? ' critical' : '';
+          pdfHTML += '<div class="ap-item' + criticalClass + '">';
+          if (a.action.critical) {
+            pdfHTML += '<div class="critical-banner">IMMEDIATE ACTION NEEDED</div>';
+          }
+          pdfHTML += '<div class="ap-content">';
+          pdfHTML += '<div class="ap-item-header">' + esc(a.sector) + ' / ' + esc(a.category) + '</div>';
+          pdfHTML += '<div class="ap-item-row"><b>Description:</b> <span>' + esc((a.action.description) || '') + '</span></div>';
+          pdfHTML += '<div class="ap-item-row"><b>Person:</b> <span>' + esc((a.action.person) || '') + '</span></div>';
+          pdfHTML += '<div class="ap-item-row"><b>Action:</b> <span>' + esc((a.action.actionNeeded) || '') + '</span></div>';
+          pdfHTML += '<div class="ap-item-row"><b>Status:</b> <span>' + esc((a.action.status) || '') + '</span></div>';
+          pdfHTML += '</div>';
+          var apPhotoSrc = a.photo || a.photoThumb_removed || ''; if (apPhotoSrc) pdfHTML += '<div class="ap-image-box"><img class="ap-photo" src="' + apPhotoSrc + '" alt="Photo"/></div>';
+          pdfHTML += '</div>';
+        });
+      }
+      pdfHTML += '</div>';
+
+      // Page 2: Comments with Photos
+      pdfHTML += '<div class="page">';
+      pdfHTML += '<div class="section-title">Comments & Notes</div>';
+      var commentItems = [];
+      for (var sid in state.sectors) {
+        var sec = state.sectors[sid];
+        (sec.categories || []).forEach(function (cat) {
+          (cat.questions || []).forEach(function (q) {
+            var hasComment = (q.comment || '').trim().length > 0;
+            var hasPhoto = q.photo || q.photoThumb_removed;
+            if (hasComment || hasPhoto) {
+              commentItems.push({ sector: sec.title, category: cat.name, text: q.text, comment: q.comment || '', photo: q.photo || q.photoThumb_removed || '' });
+            }
+          });
+        });
+      }
+
+      if (commentItems.length === 0) {
+        pdfHTML += '<p style="color:#999;">No comments.</p>';
+      } else {
+        commentItems.forEach(function (c) {
+          pdfHTML += '<div class="comment-block">';
+          pdfHTML += '<div class="comment-q">' + esc(c.sector) + ' / ' + esc(c.category) + ': ' + esc(c.text) + '</div>';
+          if (c.comment) pdfHTML += '<div class="comment-text">' + esc(c.comment).replace(/\n/g, '<br/>') + '</div>';
+          if (c.photo) pdfHTML += '<img class="comment-photo" src="' + c.photo + '" alt="Photo"/>';
+          pdfHTML += '</div>';
+        });
+      }
+      pdfHTML += '</div>';
+
+      // Page 3+: All Answered Questions
+      pdfHTML += '<div class="page">';
+      pdfHTML += '<div class="section-title">All Answered Questions</div>';
+      var answeredBySector = new Map();
+      for (var sid in state.sectors) {
+        var sec = state.sectors[sid];
+        (sec.categories || []).forEach(function (cat) {
+          (cat.questions || []).forEach(function (q) {
+            if (q.answer === 'Pass' || q.answer === 'Fail') {
+              if (!answeredBySector.has(sec.title)) answeredBySector.set(sec.title, new Map());
+              var byCat = answeredBySector.get(sec.title);
+              if (!byCat.has(cat.name)) byCat.set(cat.name, []);
+              byCat.get(cat.name).push({ text: q.text, answer: q.answer });
+            }
+          });
+        });
+      }
+
+      if (answeredBySector.size === 0) {
+        pdfHTML += '<p style="color:#999;">No answered questions.</p>';
+      } else {
+        answeredBySector.forEach(function (cmap, sector) {
+          pdfHTML += '<div class="answer-sector">' + esc(sector) + '</div>';
+          cmap.forEach(function (list, cat) {
+            pdfHTML += '<div class="answer-cat">' + esc(cat) + '</div>';
+            list.forEach(function (item) {
+             pdfHTML += '<div class="answer-item"><span class="answer-text">' + esc(item.text) + ' - <b style="color:' + (item.answer === 'Pass' ? '#16a34a' : '#dc2626') + '">' + (item.answer === 'Pass' ? '✔ Pass' : '✖ Fail') + '</b></span></div>';
+            });
+          });
+        });
+      }
+      pdfHTML += '</div>';
+      pdfHTML += '</body></html>';
+
+      // Open the print preview in a new window / tab
+      var blob = new Blob([pdfHTML], { type: 'text/html' });
+ var url = URL.createObjectURL(blob);
+ var printWindow = window.open(url, '_blank');
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(pdfHTML);
+        printWindow.document.close();
+        var pdfDocTitle = 'Audit_' + (store || 'Report').replace(/[^a-zA-Z0-9]/g, '_') + '_' + (d || 'Date');
+        printWindow.document.title = pdfDocTitle;
+        printWindow.focus();
+        printWindow.focus();
+      } else {
+        // Fallback to HTML download if popup blocked
+        var blob = new Blob([pdfHTML], { type: 'text/html;charset=utf-8' });
+        var a = document.createElement('a');
+        var safe = (store || 'audit').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Retail Audit (Modular) - ' + safe + '_' + (d || 'date') + '.html';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    }
+
+    // ===== New CLEAR ANSWERS ONLY function ===== 
+    function clearAnswersOnly() {
+      if (!confirm("Clear all answers, photos and action plans? Your question bank and text edits will remain."))
+        return;
+      // Clear meta fields 
+      state.meta = { store: "", date: "", auditor: "", manager: "", areaManager: "", auditorFeedback: "" };
+      var af = document.getElementById('auditorFeedback'); if (af) af.value = '';
+      var afc = document.getElementById('afCounter'); if (afc) afc.textContent = '0 / 300';
+      // Clear answer, action and photos for every question 
+      for (const sid in state.sectors) {
+        const sec = state.sectors[sid];
+        sec.categories.forEach(function (cat) {
+          cat.questions.forEach(function (q) {
+            q.answer = null;
+            q.photo = null;
+            q.photoThumb_removed = null;
+            q.action = null;
+            q.comment = '';
+          });
+        });
+      }
+      quickSave();
+      render();
+    }
+    // ===== Storage & lifecycle ===== 
+    function currentWorkKey() { var s = $('#storeName').value.trim() || 'store'; var d = $('#auditDate').value || 'date'; return WORK_KEY_BASE + '__' + s.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '__' + d; }
+    function saveWorkingCopy() {
+      setSaveStatus('saving');
+      saveStateToStorage(currentWorkKey(), state).then(function (ok) {
+        setSaveStatus(ok ? 'saved' : 'error');
+        if (ok) { toast('Saved ✓'); }
+        else { alert('Save failed: storage unavailable'); }
+      });
+    }
+    // Debounced autosave: batches rapid edits to reduce storage writes (better on iPad)
+var _qsTimer = null;
+var _qsPending = false;
+var QS_DEBOUNCE_MS = 350;
+function quickSaveNow() {
+  setSaveStatus('saving');
+  return saveStateToStorage(currentWorkKey(), state).then(function (ok) {
+    setSaveStatus(ok ? 'saved' : 'error');
+    return ok;
+  });
+}
+function quickSave() {
+  // schedule a save shortly after the last change
+  _qsPending = true;
+  setSaveStatus('saving');
+  clearTimeout(_qsTimer);
+  _qsTimer = setTimeout(function(){
+    _qsPending = false;
+    quickSaveNow();
+  }, QS_DEBOUNCE_MS);
+}
+function clearWorkingCopy() { if (!confirm('Clear all progress on this page? This cannot be undone.')) return; state.meta = { store: '', date: '', auditor: '', manager: '', areaManager: '', auditorFeedback: '' }; state.sectors = {}; removeStateFromStorage(currentWorkKey()).then(function () { render(); }).catch(function () { render(); }); }
+    function saveStateToStorage(key, fullState) {
+  var payload = JSON.stringify(cloneWithoutHeavyBits(fullState));
+  var wroteLocal = false;
+  // Try localStorage (fast path)
+  try { localStorage.setItem(key, payload); wroteLocal = true; } catch (e) { wroteLocal = false; }
+  // Also write to IndexedDB when available (larger quota + more durable on iPad)
+  if (window.indexedDB) {
+    return idbSet(key, payload)
+      .then(function(){ return true; })
+      .catch(function(){ return wroteLocal; });
+  }
+  return Promise.resolve(wroteLocal);
+}
+    function loadStateFromStorage(key) {
+      try { return Promise.resolve(localStorage.getItem(key)); }
+      catch (e) {
+        if (window.indexedDB) { return idbGet(key).catch(function () { return null; }); }
+        return Promise.resolve(null);
+      }
+    }
+    function removeStateFromStorage(key) {
+      try { localStorage.removeItem(key); return Promise.resolve(true); }
+      catch (e) {
+        if (window.indexedDB) { return idbRemove(key).then(function () { return true; }).catch(function () { return false; }); }
+        return Promise.resolve(false);
+      }
+    }
+    function loadKeysFromStorage() {
+  // Merge localStorage + IndexedDB keys so drafts survive better on iPad
+  var localKeys = [];
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf(WORK_KEY_BASE + '__') === 0) localKeys.push(k);
+    }
+  } catch (e) { localKeys = []; }
+  if (window.indexedDB) {
+    return idbKeys().then(function(all){
+      all = all || [];
+      var merged = localKeys.slice();
+      all.forEach(function(k){ if (k && k.indexOf(WORK_KEY_BASE + '__') === 0 && merged.indexOf(k) === -1) merged.push(k); });
+      return merged;
+    }).catch(function(){ return localKeys; });
+  }
+  return Promise.resolve(localKeys);
+}
+    function restoreLastWorkingCopy() {
+      return loadKeysFromStorage().then(function (keys) {
+        keys.sort();
+        if (keys.length) { return loadStateFromStorage(keys[keys.length - 1]); }
+        return null;
+      }).then(function (last) {
+        if (last) {
+          try { var draft = JSON.parse(last); if (draft && draft.sectors) { state = draft; } } catch (_) { }
+        }
+      });
+    }
+    function idbOpen() {
+      return new Promise(function (resolve, reject) {
+        if (!window.indexedDB) { return reject(new Error('IndexedDB unavailable')); }
+        var req = indexedDB.open('birds_audit_storage', 1);
+        req.onupgradeneeded = function (ev) { var db = ev.target.result; if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv'); };
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { reject(req.error); };
+      });
+    }
+    function idbGet(key) {
+      return idbOpen().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction('kv', 'readonly');
+          var req = tx.objectStore('kv').get(key);
+          req.onsuccess = function () { resolve(req.result); };
+          req.onerror = function () { reject(req.error); };
+        });
+      });
+    }
+    function idbSet(key, value) {
+      return idbOpen().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction('kv', 'readwrite');
+          var req = tx.objectStore('kv').put(value, key);
+          req.onsuccess = function () { resolve(true); };
+          req.onerror = function () { reject(req.error); };
+        });
+      });
+    }
+    function idbRemove(key) {
+      return idbOpen().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction('kv', 'readwrite');
+          var req = tx.objectStore('kv').delete(key);
+          req.onsuccess = function () { resolve(true); };
+          req.onerror = function () { reject(req.error); };
+        });
+      });
+    }
+    function idbKeys() {
+      return idbOpen().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction('kv', 'readonly');
+          var req = tx.objectStore('kv').getAllKeys();
+          req.onsuccess = function () { resolve(req.result || []); };
+          req.onerror = function () { reject(req.error); };
+        });
+      });
+    }
+
+    function toast(msg) { var t = document.getElementById('saveToast'); t.textContent = msg || 'Saved ✓'; t.style.opacity = '1'; clearTimeout(toast._t); toast._t = setTimeout(function () { t.style.opacity = '0'; }, 1200); }
+    // ===== Download helper ===== 
+    function download(bytes, name, type) { var blob = (bytes instanceof Blob) ? bytes : new Blob([bytes], { type: type }); var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); }
+    function safeName(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+    function safeScriptJSON(obj) {
+      return JSON.stringify(obj)
+        .replace(/<\//g, '\\u003c/')
+        .replace(/</g, '\\u003c')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+    }
+    // --- Begin: Slim-save helpers (avoid quota issues) --- 
+    function cloneWithoutHeavyBits(src) {
+      const s = JSON.parse(JSON.stringify(src));
+      if (s && s.sectors) {
+        for (const sid in s.sectors) {
+          const sec = s.sectors[sid];
+          (sec.categories || []).forEach(cat => {
+            (cat.questions || []).forEach(q => {
+              if ('photo' in q) q.photo = null;
+              if ('extraPhoto' in q) q.extraPhoto = null;
+            });
+          });
+        }
+      }
+      return s;
+    }
+    function slimSaveToLocalStorage(key, fullState) {
+      try { const slim = cloneWithoutHeavyBits(fullState); localStorage.setItem(key, JSON.stringify(slim)); return true; } catch (e) { return false; }
+    }
+    function purgeAllWorkingCopies() { try { const KEYS = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!k) continue; if (k.indexOf(WORK_KEY_BASE + '__') === 0 || k.indexOf('birds_export_') === 0) { KEYS.push(k); } } KEYS.forEach(k => { try { localStorage.removeItem(k); } catch (_) { } }); } catch (_) { } if (window.indexedDB) { idbKeys().then(function (all) { (all || []).forEach(function (k) { if (k && (k.indexOf(WORK_KEY_BASE + '__') === 0 || k.indexOf('birds_export_') === 0)) { idbRemove(k); } }); }).catch(function () { }); } }
+    // --- End: Slim-save helpers --- 
+    // ===== Loading seeds (manual upload) ===== 
+    function buildStateFromSeed(seed) {
+      var sectors = (seed && seed.sectors) ? seed.sectors : (seed || {});
+      var next = {};
+      for (var key in sectors) {
+        var sec = sectors[key]; var cats = []; (sec.categories || []).forEach(function (cat) {
+          var qs = []; (cat.questions || []).forEach(function (q) {
+            var text = (typeof q === 'string') ? q : (q && q.text ? q.text : '');
+            var weight = (typeof q === 'object' && (q.weight != null || q.weighting != null)) ? Number(q.weight ?? q.weighting) || 1 : 1;
+            qs.push({ id: (q && q.id) ? q.id : uid(), text: text, weight: weight, answer: null, photo: null, photoThumb_removed: null, action: null, comment: '' });
+          }); cats.push({ id: uid(), name: cat.name, questions: qs });
+        }); next[key] = { title: sec.title, categories: cats };
+      }
+      state.sectors = next;
+    }
+    // ===== Listeners ===== 
+    document.getElementById('exportBtn').addEventListener('click', exportHTML);
+    var btnDownloadEvidence = document.getElementById('btnDownloadEvidence'); if (btnDownloadEvidence) { btnDownloadEvidence.addEventListener('click', exportPhotosZip); }
+    var btnPdfExport = document.getElementById('exportPdfBtn'); if (btnPdfExport) { btnPdfExport.addEventListener('click', exportPDF); }
+    var btnFullCsvExport = document.getElementById('exportFullCsvBtn'); if (btnFullCsvExport) { btnFullCsvExport.addEventListener('click', exportFullCSV); }
+    var btnAPCsvExport = document.getElementById('exportAPCsvBtn'); if (btnAPCsvExport) { btnAPCsvExport.addEventListener('click', exportActionPlanCSV); }
+    var btnAPJsonExport = document.getElementById('exportAPJsonBtn'); if (btnAPJsonExport) { btnAPJsonExport.addEventListener('click', exportAPJson); }
+    var __btnOpenDrawer = document.getElementById('btnOpenDrawer'); if (__btnOpenDrawer) { __btnOpenDrawer.addEventListener('click', openDrawer); } var __btnCloseDrawer = document.getElementById('btnCloseDrawer'); if (__btnCloseDrawer) { __btnCloseDrawer.addEventListener('click', closeDrawer); }
+    document.getElementById('saveBtn').addEventListener('click', saveWorkingCopy);
+    document.getElementById('clearBtn').addEventListener('click', clearAnswersOnly);
+    document.getElementById('apFilterStatus').addEventListener('change', renderActionPlan);
+    
+    // ===== Export All Photos as ZIP =====
+    function exportPhotosZip() {
+      if (typeof JSZip === 'undefined') { alert('JSZip library not loaded. Check internet connection.'); return; }
+      var zip = new JSZip();
+      var hasPhotos = false;
+      var store = document.getElementById('storeName').value.trim() || 'Store';
+      var d = document.getElementById('auditDate').value || new Date().toISOString().slice(0, 10);
+      var folderName = 'Audit_Photos_' + store.replace(/[^a-z0-9]/gi, '_') + '_' + d.replace(/[^a-z0-9]/gi, '_');
+      var folder = zip.folder(folderName);
+
+      for (var sid in state.sectors) {
+        var sec = state.sectors[sid];
+        var secTitle = (sec.title || sid).replace(/[^a-z0-9]/gi, '_');
+        (sec.categories || []).forEach(function (cat) {
+          var catName = (cat.name || 'Category').replace(/[^a-z0-9]/gi, '_');
+          (cat.questions || []).forEach(function (qn, i) {
+            var prefix = secTitle + '_' + catName + '_Q' + (i + 1);
+            if (qn.photo) {
+              var base64Data = qn.photo.split(',')[1];
+              if (base64Data) { folder.file(prefix + '_evidence.jpg', base64Data, { base64: true }); hasPhotos = true; }
+            }
+            if (qn.extraPhoto) {
+              var base64Data = qn.extraPhoto.split(',')[1];
+              if (base64Data) { folder.file(prefix + '_extra.jpg', base64Data, { base64: true }); hasPhotos = true; }
+            }
+          });
+        });
+      }
+
+      if (!hasPhotos) { alert('No photos found in this audit.'); return; }
+
+      var btn = document.getElementById('btnDownloadEvidence');
+      var originalText = btn ? btn.textContent : 'Download Photos';
+      if(btn) { btn.textContent = 'Zipping...'; btn.disabled = true; }
+
+      zip.generateAsync({ type: 'blob' }).then(function (content) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = folderName + '.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        if(btn) { btn.textContent = originalText; btn.disabled = false; }
+      }).catch(function (err) {
+        alert('Error generating zip: ' + err);
+        if(btn) { btn.textContent = originalText; btn.disabled = false; }
+      });
+    }
+
+    // ===== Export Audit ZIP (main app compatible format) =====
+    function exportAuditZIP() {
+      if (typeof JSZip === 'undefined') { alert('JSZip library not loaded. Check internet connection.'); return; }
+      var zip = new JSZip();
+      var store = document.getElementById('storeName').value.trim() || 'Unknown Store';
+      var auditor = document.getElementById('auditorName').value.trim() || '';
+      var manager = document.getElementById('storeManager').value.trim() || '';
+      var areaManager = document.getElementById('areaManager').value.trim() || '';
+      var d = document.getElementById('auditDate').value || new Date().toISOString().slice(0, 10);
+      var summary = document.getElementById('auditorFeedback') ? document.getElementById('auditorFeedback').value.trim() : '';
+      var scores = overallMetrics();
+
+      // Build questions array
+      var questions = [];
+      for (var sid in state.sectors) {
+        var sec = state.sectors[sid];
+        (sec.categories || []).forEach(function (cat) {
+          (cat.questions || []).forEach(function (q) {
+            if (q.answer === 'Pass' || q.answer === 'Fail' || q.answer === 'NA') {
+              questions.push({
+                sectorId: sid,
+                categoryId: cat.id,
+                questionId: q.id,
+                answer: q.answer,
+                comment: q.comment || ''
+              });
+            }
+          });
+        });
+      }
+
+      // Build actions array
+      var actions = [];
+      for (var sid2 in state.sectors) {
+        var sec2 = state.sectors[sid2];
+        (sec2.categories || []).forEach(function (cat2) {
+          (cat2.questions || []).forEach(function (q2) {
+            if (q2.action && q2.action.enabled) {
+              actions.push({
+                questionId: q2.id,
+                description: q2.action.description || '',
+                personResponsible: q2.action.person || '',
+                actionNeeded: q2.action.actionNeeded || '',
+                critical: q2.action.critical ? true : false,
+                status: q2.action.status || 'Open',
+                closedOn: q2.action.closedOn || '',
+                createdAt: q2.action.createdAt || new Date().toISOString()
+              });
+            }
+          });
+        });
+      }
+
+      // Build metadata
+      var metadata = {
+        storeName: store,
+        storeEmail: '',
+        branchId: '',
+        manager: manager,
+        auditor: auditor,
+        areaManager: areaManager,
+        date: d,
+        summary: summary,
+        isTraining: false
+      };
+
+      // Create audit_session.json
+      var sessionData = {
+        metadata: metadata,
+        questions: questions,
+        actions: actions,
+        scores: { overall: scores.pct }
+      };
+      zip.file('audit_session.json', JSON.stringify(sessionData, null, 2));
+
+      // Add photos
+      var photoCount = 0;
+      var photosFolder = zip.folder('photos');
+      for (var sid3 in state.sectors) {
+        (state.sectors[sid3].categories || []).forEach(function (cat3) {
+          (cat3.questions || []).forEach(function (q3) {
+            if (q3.photo) {
+              var base64Data = q3.photo.split(',')[1];
+              if (base64Data) {
+                photosFolder.file(sid3 + '_' + cat3.id + '_' + q3.id + '.jpg', base64Data, { base64: true });
+                photoCount++;
+              }
+            }
+            if (q3.extraPhoto) {
+              var base64Extra = q3.extraPhoto.split(',')[1];
+              if (base64Extra) {
+                photosFolder.file(sid3 + '_' + cat3.id + '_' + q3.id + '_extra.jpg', base64Extra, { base64: true });
+                photoCount++;
+              }
+            }
+          });
+        });
+      }
+
+      var btn = document.getElementById('btnExportAuditZip');
+      var originalText = btn ? btn.textContent : 'Save Audit ZIP';
+      if (btn) { btn.textContent = 'Zipping...'; btn.disabled = true; }
+
+      zip.generateAsync({ type: 'blob' }).then(function (content) {
+        var fileName = 'audit_' + store.replace(/[^a-z0-9]/gi, '_') + '_' + d.replace(/[^a-z0-9]/gi, '_') + '.zip';
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        if (btn) { btn.textContent = originalText; btn.disabled = false; }
+        toast('Audit ZIP saved (' + questions.length + ' answers, ' + actions.length + ' actions, ' + photoCount + ' photos) ✓');
+      }).catch(function (err) {
+        alert('Error generating ZIP: ' + err);
+        if (btn) { btn.textContent = originalText; btn.disabled = false; }
+      });
+    }
+    // Expose for mobile bar onclick
+    window.exportAuditZIP = exportAuditZIP;
+    // Bind header button
+    var __btnExportAuditZip = document.getElementById('btnExportAuditZip');
+    if (__btnExportAuditZip) { __btnExportAuditZip.addEventListener('click', exportAuditZIP); }
+
+    document.getElementById('btnClearCache').addEventListener('click', function () {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (isIOS) {
+    try {
+      localStorage.clear();
+      if (window.indexedDB && indexedDB.databases) {
+        indexedDB.databases().then(dbs => dbs.forEach(db => indexedDB.deleteDatabase(db.name)));
+      }
+      toast('Cache cleared ✓ (iPad)');
+      location.reload();
+    } catch (e) {
+      alert('Storage could not be fully cleared. Please reload the page.');
+    }
+    return;
+  }
+  if (!confirm('Clear saved drafts and exported autosaves from this browser?')) return;
+  purgeAllWorkingCopies();
+  toast('Cache cleared ✓');
+});
+    var __mt = document.getElementById('modeToggle');
+    if (__mt) {
+      __mt.addEventListener('change', function () { BUILD_MODE = this.checked; applyBuildModeUI(); render(); });
+    }
+    applyBuildModeUI();
+    document.getElementById('logoPicker').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { state.watermark = r.result; try { localStorage.setItem('audit_watermark_v2', r.result); } catch (e) { } applyWatermarkToPage(); applyBuildModeUI(); quickSave(); }; r.readAsDataURL(f); });
+    document.getElementById('saveTemplateBtn').addEventListener('click', exportJSON);
+    document.getElementById('seedPicker').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var fr = new FileReader(); fr.onload = function () { try { var seed = JSON.parse(fr.result); purgeAllWorkingCopies(); buildStateFromSeed(seed); nav = { level: 'sectors', sectorId: null, categoryId: null }; render(); toast('Questions loaded ✓'); } catch (err) { alert('Invalid JSON: ' + err.message); } }; fr.readAsText(f, 'utf-8'); });
+    ['#storeName', '#auditDate', '#auditorName', '#storeManager', '#areaManager'].forEach(function (sel) { document.querySelector(sel).addEventListener('input', function () { state.meta.store = $('#storeName').value.trim(); state.meta.date = $('#auditDate').value; state.meta.auditor = $('#auditorName').value.trim(); state.meta.manager = $('#storeManager').value.trim(); state.meta.areaManager = $('#areaManager').value.trim(); quickSave(); }); });
+    
+    // ✅ NEW: Ensure the Auditor Feedback box actively autosaves every keystroke to prevent data loss
+    var afInput = document.getElementById('auditorFeedback');
+    if (afInput) {
+      afInput.addEventListener('input', function() {
+        state.meta.auditorFeedback = this.value;
+        var afc = document.getElementById('afCounter');
+        if (afc) afc.textContent = this.value.length + ' / 300';
+        quickSave();
+      });
+    }
+
+    // Try restore from last working key (if any)
+    render();
+    restoreLastWorkingCopy().then(function () {
+      if (!state.sectors || Object.keys(state.sectors).length === 0) {
+        if (typeof EMBEDDED_QUESTIONS !== 'undefined' && EMBEDDED_QUESTIONS) {
+          buildStateFromSeed(EMBEDDED_QUESTIONS);
+        }
+      }
+      render();
+      updateOverallScore();
+      updateFloatingScore();
+    });
+
+// ===== Script block 4 =====
+(function () {
+      // Rebind updateFloatingScore to also drive the bottom-bar pill and optional desktop dock
+      window.updateFloatingScore = function () {
+        try {
+          var pct = (document.getElementById('scorePct')?.textContent || '0').replace('%', '');
+          var open = (document.getElementById('openActions')?.textContent || '0');
+          var b = document.getElementById('floatingScore'); if (b) { b.textContent = 'Score: ' + pct + '% • Actions: ' + open; b.style.display = 'block'; }
+          var pill = document.getElementById('mbarScore'); if (pill) { pill.textContent = 'Score: ' + pct + '% • Actions: ' + open; pill.style.display = 'block'; }
+          var dock = document.getElementById('scoreDock'); if (dock) { dock.textContent = 'Score: ' + pct + '% • Actions: ' + open; dock.style.display = 'block'; }
+        } catch (e) { }
+      };
+      // In Audit mode, hide header controls except: Load JSON, Clear, Export, ZIP
+      window.applyBuildModeUI = function () {
+        try {
+          document.querySelectorAll('.build-only').forEach(function (el) { el.style.display = window.BUILD_MODE ? '' : 'none'; });
+          var lab = document.getElementById('modeLabel'); if (lab) lab.textContent = window.BUILD_MODE ? 'Build mode' : 'Audit mode';
+          var actions = document.querySelector('header .actions');
+          if (actions) {
+            Array.from(actions.children).forEach(function (child) {
+              var keep = false;
+              if (['saveBtn', 'clearBtn', 'btnClearCache', 'exportAPCsvBtn', 'exportPdfBtn', 'btnExportAuditZip'].indexOf(child.id) !== -1) keep = true;
+              if (child.querySelector && child.querySelector('#seedPicker')) keep = true; // the Load Question Set label
+              child.style.display = (!window.BUILD_MODE && !keep) ? 'none' : '';
+            });
+          }
+        } catch (e) { }
+      };
+      // Ensure the score pill exists after hydration
+      document.addEventListener('DOMContentLoaded', function () {
+        var bar = document.querySelector('.mbar');
+        if (bar && !document.getElementById('mbarScore')) {
+          var pill = document.createElement('div'); pill.id = 'mbarScore'; pill.className = 'btn ghost'; pill.setAttribute('role', 'status'); pill.setAttribute('aria-live', 'polite'); pill.textContent = 'Score: 0% • Actions: 0';
+          pill.style.gridColumn = 'span 2'; pill.style.textAlign = 'center';
+          bar.insertBefore(pill, bar.firstChild);
+        }
+        // Re-apply visibility with our override
+        try { window.applyBuildModeUI(); window.updateFloatingScore(); } catch (e) { }
+      });
+    })();
+
+// ===== Script block 5 =====
+(function () {
+      try {
+        const map = { 'open': 'status-open', 'closed': 'status-closed' };
+        const scopes = document.querySelectorAll('#apTable, .report, table');
+        scopes.forEach(scope => {
+          scope.querySelectorAll('td').forEach(td => {
+            if (td.querySelector('*')) return;
+            const txt = (td.textContent || '').trim();
+            const key = txt.toLowerCase();
+            if (map[key]) {
+              const span = document.createElement('span');
+              span.className = 'status ' + map[key];
+              span.setAttribute('data-auto', 'badge');
+              span.innerHTML = key === 'open'
+                ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg> Open'
+                : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg> Closed';
+              td.textContent = '';
+              td.appendChild(span);
+              td.classList.add('status-cell');
+            }
+          });
+        });
+      } catch (e) { }
+    })();
+
+// ===== Script block 6 =====
+(function () {
+      try {
+        const map = { 'open': 'is-open', 'closed': 'is-closed' };
+        const scopes = document.querySelectorAll('#apTable, .report, table');
+        scopes.forEach(scope => {
+          scope.querySelectorAll('td').forEach(td => {
+            const badge = td.querySelector('span.status');
+            const raw = (td.textContent || '').trim().toLowerCase();
+            const key = badge ? (badge.textContent || '').trim().toLowerCase() : raw;
+            if (map[key]) {
+              const row = td.closest('tr');
+              if (row) row.classList.add(map[key]);
+              const tile = td.closest('.tile, .action-card');
+              if (tile) tile.classList.add(map[key]);
+            }
+          });
+        });
+      } catch (e) { }
+    })();
+
+// ===== Script block 7 =====
+(async function () {
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          await navigator.storage.persist();
+        }
+        if (navigator.storage && navigator.storage.estimate) {
+          const e = await navigator.storage.estimate();
+          console.log('[storage] usage', e.usage, 'quota', e.quota);
+        }
+      } catch (_) {/*noop*/ }
+    })();
+
+// ===== Script block 8 =====
+(function () {
+      'use strict';
+      var AUDITOR_NAME = 'Blake Lowis';
+      var STORE_EMAILS_TEXT = "\n\"Albert Street\" <Albert.Street@birdsofderby.co.uk>; \"Alfreton\" <Alfreton@birdsofderby.co.uk>; \"Allenton\" <Allenton@birdsofderby.co.uk>; \"Alvaston\" <Alvaston@birdsofderby.co.uk>; \"Anstey\" <Anstey@birdsofderby.co.uk>; \"Arnold\" <Arnold@birdsofderby.co.uk>; \"Ashbourne\" <Ashbourne@birdsofderby.co.uk>; \"Ashby\" <Ashby@birdsofderby.co.uk>; \"Bakery Shop\" <Bakery.Shop@birdsofderby.co.uk>; \"Beeston\" <Beeston@birdsofderby.co.uk>; \"Belper\" <Belper@birdsofderby.co.uk>; \"Bingham\" <Bingham@birdsofderby.co.uk>; \"Borrowash\" <Borrowash@birdsofderby.co.uk>; \"Branston\" <Branston@birdsofderby.co.uk>; \"Bulwell\" <Bulwell@birdsofderby.co.uk>; \"Burton\" <burton@birdsofderby.co.uk>; \"Chaddesden\" <Chaddesden@birdsofderby.co.uk>; \"Chellaston\" <Chellaston@birdsofderby.co.uk>; \"Chilwell\" <Chilwell@birdsofderby.co.uk>; \"Clifton\" <Clifton@birdsofderby.co.uk>; \"Coalville\" <Coalville@birdsofderby.co.uk>; \"Craig White\" <craig.white@birdsofderby.co.uk>; \"Duffield\" <Duffield@birdsofderby.co.uk>; \"East Leake\" <East.Leake@birdsofderby.co.uk>; \"Eastwood\" <Eastwood@birdsofderby.co.uk>; \"Heanor\" <Heanor@birdsofderby.co.uk>; \"Hucknall\" <Hucknall@birdsofderby.co.uk>; \"Ilkeston\" <Ilkeston@birdsofderby.co.uk>; \"Intu Expresso\" <Intu.Expresso@birdsofderby.co.uk>; \"Katie Cartwright\" <katie.cartwright@birdsofderby.co.uk>; \"Keyworth\" <Keyworth@birdsofderby.co.uk>; \"Lichfield\" <Lichfield@birdsofderby.co.uk>; \"Listergate\" <Listergate@birdsofderby.co.uk>; \"Littleover\" <Littleover@birdsofderby.co.uk>; \"Long Eaton\" <Long.Eaton@birdsofderby.co.uk>; \"Loughborough\" <Loughborough@birdsofderby.co.uk>; \"Mackworth\" <Mackworth@birdsofderby.co.uk>; \"Mansfield\" <Mansfield@birdsofderby.co.uk>; \"Mapperley\" <Mapperley@birdsofderby.co.uk>; \"Matlock\" <Matlock@birdsofderby.co.uk>; \"Mel Hughes\" <mel.hughes@birdsofderby.co.uk>; \"Melanie Harding\" <melanie.harding@birdsofderby.co.uk>; \"Melbourne\" <Melbourne@birdsofderby.co.uk>; \"Melton Road\" <Melton.Road@birdsofderby.co.uk>; \"Mickleover\" <Mickleover@birdsofderby.co.uk>; \"Newark\" <Newark@birdsofderby.co.uk>; \"Oakwood\" <Oakwood@birdsofderby.co.uk>; \"Park Farm\" <Park.Farm@birdsofderby.co.uk>; \"Paul Reeves\" <paul.reeves@birdsofderby.co.uk>; \"Radcliffe\" <Radcliffe@birdsofderby.co.uk>; \"Ripley\" <Ripley@birdsofderby.co.uk>; \"Ruddington\" <ruddington@birdsofderby.co.uk>; \"Sherwood\" <Sherwood@birdsofderby.co.uk>; \"Sinfin\" <Sinfin@birdsofderby.co.uk>; \"Southwell\" <Southwell@birdsofderby.co.uk>; \"Spondon\" <Spondon@birdsofderby.co.uk>; \"Stapleford\" <Stapleford@birdsofderby.co.uk>; \"Stretton\" <stretton@birdsofderby.co.uk>; \"Sutton\" <Sutton@birdsofderby.co.uk>; \"Sutton Lakeside\" <Sutton.Lakeside@birdsofderby.co.uk>; \"Suzanne Green\" <suzanne.green@birdsofderby.co.uk>; \"Swadlincote\" <Swadlincote@birdsofderby.co.uk>; \"Tamworth\" <Tamworth@birdsofderby.co.uk>; \"Teal Park\" <Teal.Park@birdsofderby.co.uk>; \"Tom Henson\" <tom.henson@birdsofderby.co.uk>; \"Uttoxeter\" <Uttoxeter@birdsofderby.co.uk>; \"Victoria Centre\" <Victoria.Centre@birdsofderby.co.uk>; \"West Bridgford\" <West.Bridgford@birdsofderby.co.uk>; \"Wollaton\" <Wollaton@birdsofderby.co.uk>\n";
+
+      function q(doc, sel) { return doc.querySelector(sel); }
+      function qa(doc, sel) { return Array.prototype.slice.call(doc.querySelectorAll(sel)); }
+      function byId(doc, id) { return doc.getElementById(id); }
+      function getTxt(el) { return el && el.textContent ? el.textContent.trim() : ''; }
+
+      function escCSV(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+      function ddmmyyyy(iso) { if (!iso) return ''; var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m ? (m[3] + m[2] + m[1]) : ''; }
+      function slugEmailLocal(email) { if (!email) return 'STORE'; var local = String(email).split('@')[0] || 'STORE'; return local.replace(/[^A-Za-z0-9]+/g, '').toUpperCase(); }
+      function normalizeName(s) { return String(s || '').replace(/\s+/g, ' ').trim().toUpperCase(); }
+      function parseEmailList(text) { var map = new Map(); var re = /"([^"]+)"\s*<([^>]+)>/g, m; while ((m = re.exec(text)) !== null) { map.set(normalizeName(m[1]), m[2]); } return map; }
+
+      var EMAIL_MAP = parseEmailList(STORE_EMAILS_TEXT);
+
+      function findStoreNameInput(doc) { return q(doc, '#storeName, input[name*="store" i], input[id*="store" i]'); }
+      function findAuditorInput(doc) { return q(doc, '#auditorName, #auditor, input[name*="auditor" i], input[id*="auditor" i]'); }
+      function findAuditDateInput(doc) { return q(doc, '#auditDate, input[type=date], input[name*="date" i], input[id*="date" i]'); }
+
+      function ensureStoreSelector(doc) {
+        var storeInput = findStoreNameInput(doc); if (!storeInput) return null;
+        if (byId(doc, 'storeSelector')) return byId(doc, 'storeSelector');
+        var sel = doc.createElement('select'); sel.id = 'storeSelector';
+        sel.style.cssText = 'max-width:100%;padding:10px;border:1px solid var(--border,#cbd5e1);border-radius:10px;background:#fff;color:#111;display:block;margin-top:8px;';
+        var html = '<option value="">(Select store)</option>';
+        EMAIL_MAP.forEach(function (email, name) { html += '<option value="' + email + '">' + name + ' — ' + email + '</option>'; });
+        sel.innerHTML = html;
+        var label = storeInput.closest('label');
+        if (label && label.parentNode) {
+          if (label.nextSibling) { label.parentNode.insertBefore(sel, label.nextSibling); }
+          else { label.parentNode.appendChild(sel); }
+        } else if (storeInput.parentNode) {
+          try { storeInput.parentNode.insertBefore(sel, storeInput); } catch (e) { storeInput.before(sel); }
+        }
+        var match = EMAIL_MAP.get(normalizeName(storeInput.value || '')); if (match) sel.value = match;
+        sel.addEventListener('change', function () { var opt = sel.options[sel.selectedIndex]; var v = opt ? opt.text : ''; var n = v.split(' — ')[0] || ''; if (n) storeInput.value = n; });
+        storeInput.addEventListener('blur', function () { var m = EMAIL_MAP.get(normalizeName(storeInput.value || '')); if (m && sel.value !== m) sel.value = m; });
+        return sel;
+      }
+
+      
+function bakeAuditor(doc) {
+  var aud = findAuditorInput(doc);
+  if (!aud) return;
+  if (!aud.value || !aud.value.trim()) aud.value = AUDITOR_NAME;
+  aud.removeAttribute('readonly');
+  aud.style.background = '';
+}
+
+      function buildQIdx() {
+        var root = (window.TEAMINPUT || window.teaminput || {}); var idx = {};
+        try { Object.keys(root).forEach(function (k) { var sec = root[k] || {}; var area = sec.title || ''; (sec.categories || []).forEach(function (cat) { var cn = cat.name || ''; (cat.questions || []).forEach(function (q) { if (q && q.id) { idx[q.id] = { area: area, category: cn, weight: (q.weight || ''), text: (q.text || '') }; } }); }); }); } catch (e) { }
+        return idx;
+      }
+      var QIDX = buildQIdx();
+
+      function inferCtx(tr) {
+        var ctx = { area: '', category: '', questionId: '', weight: '', questionText: '' };
+        ctx.questionId = tr.getAttribute('data-question-id') || '';
+        if (!ctx.questionId) { var qEl = tr.closest ? tr.closest('.q,[data-question-id]') : null; if (qEl) { ctx.questionId = qEl.getAttribute('data-question-id') || qEl.id || ''; } }
+        var meta = ctx.questionId ? QIDX[ctx.questionId] : null; if (meta) { ctx.area = meta.area; ctx.category = meta.category; ctx.weight = meta.weight; ctx.questionText = meta.text; }
+        if (!ctx.area || !ctx.category) { var first = tr.querySelector('td'); var path = getTxt(first); if (path.indexOf('/') !== -1) { var parts = path.split('/'); if (!ctx.area) ctx.area = (parts[0] || '').trim(); if (!ctx.category) ctx.category = (parts[1] || '').trim(); } }
+        return ctx;
+      }
+
+      function collectPhotos(tr) {
+        var out = [];
+        Array.prototype.slice.call(tr.querySelectorAll('img')).forEach(function (img) { var src = img.getAttribute('src') || img.getAttribute('data-src'); if (src) out.push(src); });
+        Array.prototype.slice.call(tr.querySelectorAll('[data-photo],[data-thumb],[data-image]')).forEach(function (el) { var v = el.getAttribute('data-photo') || el.getAttribute('data-thumb') || el.getAttribute('data-image'); if (v) out.push(v); });
+        return out;
+      }
+
+      function collectActions(doc) {
+        var rows = [];
+        qa(doc, '#apTable tbody tr, #actionPlanTable tbody tr, #actionTable tbody tr, table[data-role="ap-table"] tbody tr').forEach(function (tr, i) {
+          var tds = tr.querySelectorAll('td'); if (!tds.length) return;
+          var idCell = tds[0], titleCell = tds[1], ownerCell = tds[2], dueCell = tds[3], statusCell = tds[4] || null;
+          var title = (titleCell && (titleCell.querySelector('input,textarea') || {}).value) || getTxt(titleCell);
+          var owner = (ownerCell && (ownerCell.querySelector('input,select') || {}).value) || getTxt(ownerCell);
+          var due = (dueCell && ((dueCell.querySelector('input[type=date]') || {}).value)) || getTxt(dueCell);
+          var status = (statusCell && (statusCell.querySelector('select') || {}).value) || getTxt(statusCell) || 'Open';
+          var idraw = getTxt(idCell); var id = (/^\d+$/.test(idraw)) ? ('A' + idraw) : ('A' + (i + 1));
+          var ctx = inferCtx(tr); var photos = collectPhotos(tr);
+          rows.push({ id: id, title: trim(title), owner: trim(owner), due: trim(due), status: trim(status), ctx: ctx, photos: photos });
+        });
+        return rows;
+      }
+      function trim(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+
+      function buildCSV(doc) {
+        var storeInput = findStoreNameInput(doc); var dateInput = findAuditDateInput(doc);
+        var store = storeInput && storeInput.value ? storeInput.value.trim() : '';
+        var auditDate = dateInput && dateInput.value ? dateInput.value.trim() : '';
+        var dmy = ddmmyyyy(auditDate);
+        var sel = byId(doc, 'storeSelector'); var storeEmail = sel ? sel.value : '';
+        var fileId = slugEmailLocal(storeEmail) + '_' + dmy;
+
+        // Clean v2: StoreId must equal Store Name
+        var storeId = store;
+
+        var head = ['Store', 'StoreId', 'StoreEmail', 'AuditDate', 'FileId', 'ActionId', 'Title', 'Owner', 'Due', 'Status', 'Area', 'Category', 'QuestionId', 'QuestionWeight', 'QuestionText', 'PhotoCount', 'PhotoThumbs'];
+        var lines = [head.join(',')];
+
+        collectActions(doc).forEach(function (r) {
+          var row = {
+            Store: store, StoreId: storeId, StoreEmail: storeEmail, AuditDate: auditDate, FileId: fileId,
+            ActionId: r.id, Title: r.title, Owner: r.owner, Due: r.due, Status: r.status,
+            Area: r.ctx.area, Category: r.ctx.category, QuestionId: r.ctx.questionId, QuestionWeight: r.ctx.weight, QuestionText: r.ctx.questionText,
+            PhotoCount: (r.photos ? r.photos.length : 0), PhotoThumbs: (r.photos || []).join(';')
+          };
+          lines.push(head.map(function (h) { return escCSV(row[h]); }).join(','));
+        });
+        return { csv: lines.join('\n'), fileId: fileId };
+      }
+      window.ensureStoreSelector = ensureStoreSelector;
+      window.bakeAuditor = bakeAuditor;
+    })();
+
+// ===== Script block 9 =====
+(function () {
+      'use strict';
+      function ready(fn) {
+        if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(fn, 0);
+        else document.addEventListener('DOMContentLoaded', fn, { once: true });
+      }
+      function collectStyles() {
+        var out = '';
+        var nodes = document.querySelectorAll('style,link[rel="stylesheet"]');
+        nodes.forEach(function (n) {
+          try {
+            if (n.tagName === 'STYLE') out += '\n' + n.innerHTML;
+            else if (n.href) { var x = new XMLHttpRequest(); x.open('GET', n.href, false); x.send(null); if (x.status === 200) out += '\n' + x.responseText; }
+          } catch (e) { }
+        });
+        return out;
+      }
+      function buildInnerJS() {
+        return (function () {/*
+      (function(){
+        'use strict';
+        var SP_URL='https://birdsofderby.sharepoint.com/sites/RetailAudits/Shared%20Documents/Forms/AllItems.aspx?FolderCTID=0x012000B570A93B29EB1640B2C4787E5F7CBC0D&id=%2Fsites%2FRetailAudits%2FShared%20Documents%2FRetail%20Audits%2FDashboard%2Fclosed';
+        function qa(sel,root){return Array.prototype.slice.call((root||document).querySelectorAll(sel));}
+        function trim(s){return (s||'').replace(/\s+/g,' ').trim();}
+        function closestRow(el){return el&&(el.closest('tr')||el.closest('.ap-row,.ap-item,.card'));}
+        function val(el){if(!el)return'';if(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT')return el.value||'';var ip=el.querySelector('input,textarea,select');return ip?ip.value||'':trim(el.textContent||'');}
+        function rowCSV(row){var table=row.closest('table');var hs=table?qa('thead th',table).map(th=>'"'+trim(th.textContent).replace(/"/g,'""')+'"'):[];var cs=qa('td',row).map(td=>'"'+val(td).replace(/"/g,'""')+'"');var out=[];if(hs.length&&hs.length===cs.length)out.push(hs.join(','));out.push(cs.join(','));return out.join('\r\n');}
+        function dl(name,txt){try{var b=new Blob([txt],{type:'text/csv;charset=utf-8;'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u);}catch(e){}}
+        function polish(){qa('button,[role=button]').forEach(function(b){var t=trim(b.textContent).toLowerCase();if(t==='save')b.classList.add('btn','green','small');if(t==='close')b.classList.add('btn','ghost','small');});}
+        document.addEventListener('click',function(e){try{var b=e.target.closest('button,[role=button],.btn');if(!b)return;var t=trim(b.textContent).toLowerCase();if(t==='save'){var r=closestRow(b);if(r)dl('ActionRow-'+(r.rowIndex||Date.now())+'.csv',rowCSV(r));e.preventDefault();return;}if(t==='close'){window.open(SP_URL,'_blank');e.preventDefault();return;}}catch(e){}},false);
+        try{polish();}catch(e){}
+      })();
+    */}).toString().match(/\/\*([\s\S]*)\*\//)[1];
+      }
+      function exportAP() {
+        var panel = document.getElementById('actionPanel') || document.getElementById('apTable');
+        if (!panel) { alert('Action Plan not found'); return; }
+        var css = collectStyles();
+        var inner = buildInnerJS();
+        var bodyClass = document.body.className || '';
+        var html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>' +
+          '<title>Action Plan Export</title><style>' + css + '\n.ap-export-wrap{display:none!important}</style></head>' +
+          '<body class="' + bodyClass + '"><div id="exported">' + panel.outerHTML + '</div>' +
+          '<script>' + inner + '<\/script></body></html>';
+        var blob = new Blob([html], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a'); a.href = url; (function () { var store = (document.querySelector('#storeName, [name="storeName"]')?.value || '').replace(/\s+/g, ' ').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '') || 'STORE'; var iso = (document.querySelector('#auditDate')?.value || ''); var m = /(^\d{4})-(\d{2})-(\d{2})$/.exec(iso); var dateSlug = m ? (m[3] + m[2] + m[1]) : (function () { var t = new Date().toISOString().slice(0, 10); var mm = /(^\d{4})-(\d{2})-(\d{2})$/.exec(t); return mm ? (mm[3] + mm[2] + mm[1]) : ''; })(); a.download = store + '_' + dateSlug + '.html'; })(); a.click(); URL.revokeObjectURL(url);
+      }
+      ready(function () {
+        var btn = document.getElementById('exportApBtn');
+        if (btn) btn.onclick = exportAP;
+      });
+    })();
+
+// ===== Script block 10 =====
+/* ===============================================================
+       ✅ PART 1 — SCORE HELPERS
+    =============================================================== */
+    
+function computeFullScore() {
+  const o = overallMetrics();
+  return { totalScore: o.totalAccrued, maxScore: o.totalMax, pct: o.pct };
+}
+
+
+    /* ===============================================================
+       ✅ PART 2 — AP‑ONLY ROW EXTRACTOR
+    =============================================================== */
+    function getAPRowsOnly() {
+      let rows = [];
+      let global = computeFullScore();
+
+      for (let sid in state.sectors) {
+        const sec = state.sectors[sid];
+        const sectorScore = tallySector(sid).pct;
+        const sectorFailed = isSectorCriticalFailed(sid);
+
+        (sec.categories || []).forEach(cat => {
+          const catScore = tallyCategory(sid, cat.id).pct;
+
+          (cat.questions || []).forEach(q => {
+            if (!q.action || !q.action.enabled) return;
+
+            let w = q.weight || 1;
+            let qScore = 0;
+
+            if (q.answer === "Pass") qScore = w;
+            if (q.answer === "Fail" && q.action.status === "Closed") qScore = w;
+            if (sectorFailed) qScore = 0;
+
+            rows.push({
+              sector: sec.title,
+              category: cat.name,
+              questionId: q.id,
+              question: q.text,
+              answer: q.answer || "",
+              weight: w,
+              questionScore: qScore,
+              maxQuestionScore: w,
+
+              sectorScore,
+              categoryScore: catScore,
+              totalScore: global.totalScore,
+              maxScore: global.maxScore,
+              pct: global.pct,
+
+              apDescription: q.action.description || "",
+              apPerson: q.action.person || "",
+              apAction: q.action.actionNeeded || "",
+              apStatus: q.action.status || "",
+              apClosedOn: q.action.closedOn || "",
+              apHowClosed: q.action.howClosed || "",
+              critical: q.action.critical ? true : false,
+              generalComment: q.comment || "",
+              extraComment: q.extraComment || "",
+
+              photo: q.photo || "",
+              photoThumb_removed: q.photoThumb_removed || "",
+              extraPhoto: q.extraPhoto || "",
+              extraPhotoThumb: q.extraPhotoThumb || ""
+            });
+          });
+        });
+      }
+
+      return rows;
+    }
+
+
+
+    /* ===============================================================
+       ✅ PART 4 — TEMP STORE MANAGER (unchanged)
+    =============================================================== */
+    (function StoreManagerModule() {
+      let tempStores = [];
+
+      function findStoreDropdown() {
+        if (window.ensureStoreSelector) {
+          window.ensureStoreSelector(document);
+        }
+        return document.querySelector(
+          "#storeSelector, #storeEmail, select[name*='store' i], select[id*='store' i]"
+        );
+      }
+
+      function applyTempStores() {
+        const sel = findStoreDropdown();
+        if (!sel) return;
+        Array.from(sel.querySelectorAll('option[data-temp-store]')).forEach(function (opt) { opt.remove(); });
+        tempStores.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.email;
+          opt.textContent = `${s.name} — ${s.email} (temporary)`;
+          opt.dataset.tempStore = "1";
+          sel.appendChild(opt);
+        });
+        if (!sel.value && tempStores.length) {
+          sel.value = tempStores[tempStores.length - 1].email;
+        }
+      }
+
+      function openStoreModal() {
+        const wrap = document.createElement("div");
+        wrap.id = "smModal";
+        wrap.style.cssText =
+          "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;";
+
+        const box = document.createElement("div");
+        box.style.cssText =
+          "background:#fff;padding:20px;border-radius:12px;width:320px;max-height:90vh;overflow:auto;";
+        wrap.appendChild(box);
+
+        box.innerHTML = `
+            <h3>Manage Stores</h3>
+            <label>Name:<br><input id="smName" style="width:100%;margin:6px 0;"></label>
+            <label>Email:<br><input id="smEmail" style="width:100%;margin:6px 0;"></label>
+            <button id="smAdd" class="btn green" style="width:100%;margin:10px 0;">Add Temporary Store</button>
+            <h4>Temporary Stores</h4>
+            <div id="smList"></div>
+            <button id="smClose" class="btn ghost" style="width:100%;margin-top:10px;">Close</button>
+        `;
+        document.body.appendChild(wrap);
+
+        function renderList() {
+          const list = box.querySelector("#smList");
+          list.innerHTML = "";
+          tempStores.forEach((s, i) => {
+            const row = document.createElement("div");
+            row.style.cssText =
+              "display:flex;justify-content:space-between;margin:6px 0;";
+            row.innerHTML = `
+                    <span>${s.name} (${s.email})</span>
+                    <button class="btn small ghost" data-i="${i}">X</button>
+                `;
+            row.querySelector("button").onclick = () => {
+              tempStores.splice(i, 1);
+              applyTempStores();
+              renderList();
+            };
+            list.appendChild(row);
+          });
+        }
+        renderList();
+
+        box.querySelector("#smAdd").onclick = () => {
+          const name = box.querySelector("#smName").value.trim();
+          const email = box.querySelector("#smEmail").value.trim();
+          if (!name || !email) {
+            alert("Both fields are required.");
+            return;
+          }
+          tempStores.push({ name, email });
+          applyTempStores();
+          const storeInput = document.querySelector('#storeName');
+          const sel = findStoreDropdown();
+          if (storeInput) {
+            storeInput.value = name;
+          }
+          if (sel) {
+            sel.value = email;
+          }
+          renderList();
+          box.querySelector("#smName").value = "";
+          box.querySelector("#smEmail").value = "";
+        };
+
+        box.querySelector("#smClose").onclick = () => wrap.remove();
+      }
+
+      function attachButton() {
+        const sel = findStoreDropdown();
+        if (!sel) {
+          requestAnimationFrame(attachButton);
+          return;
+        }
+        const anchor = sel.closest('label') || sel.parentElement;
+        if (!anchor || anchor.querySelector("#manageStoresBtn")) return;
+
+        const btn = document.createElement("button");
+        btn.id = "manageStoresBtn";
+        btn.type = "button";
+        btn.className = "btn small green";
+        btn.textContent = "Manage Stores";
+        btn.style.marginTop = "6px";
+        btn.onclick = openStoreModal;
+        if (anchor.tagName === 'LABEL' && anchor.parentNode) {
+          anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+        } else {
+          anchor.appendChild(btn);
+        }
+      }
+
+      function initStoreManager() {
+        ensureStoreSelector(document);
+        bakeAuditor(document);
+        attachButton();
+        applyTempStores();
+      }
+
+      if (document.readyState !== "loading") {
+        initStoreManager();
+      } else {
+        document.addEventListener("DOMContentLoaded", initStoreManager);
+      }
+    })();
+
+// ===== Script block 11 =====
+(function(){
+  if(!('serviceWorker' in navigator)) return;
+  function basePath(){
+    var p = location.pathname || '/';
+    if(/\.[A-Za-z0-9]+$/.test(p)) p = p.replace(/[^\/]*$/, '');
+    if(!p.endsWith('/')) p += '/';
+    return p;
+  }
+  window.addEventListener('load', function(){
+    var base = basePath();
+    navigator.serviceWorker.register(base + 'sw.js', { scope: base })
+      .then(function(reg){ try{ reg.update(); }catch(e){} })
+      .catch(function(e){ console.warn('[sw] register failed', e); });
+  });
+})();
+
+// ===== Script block 12 =====
+(function() {
+  /**
+   * THE LOGIC:
+   * Finds the existing export button in your header and triggers it 
+   * while forcing a local binary download for PWA compatibility.
+   */
+  async function triggerRelayExport() {
+    const pwaBtn = document.getElementById('pwa-safe-export');
+    const originalText = pwaBtn.innerHTML;
+    pwaBtn.innerHTML = '⌛ Generating...';
+    pwaBtn.disabled = true;
+
+    try {
+      // 1. PWA REDIRECT: Intercept window.open
+      // This catches the app's internal PDF stream and forces it into a download.
+      const realOpen = window.open;
+      window.open = function(url) {
+        if (url && (url.startsWith('data:application/pdf') || url.includes('blob:'))) {
+          // Convert the stream to a binary blob to prevent corruption
+          fetch(url)
+            .then(res => res.blob())
+            .then(blob => {
+              const blobUrl = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = blobUrl;
+              link.download = `Retail_Audit_${new Date().toISOString().slice(0,10)}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              
+              // Cleanup
+              setTimeout(() => {
+                link.remove();
+                URL.revokeObjectURL(blobUrl);
+              }, 250);
+            });
+          return null; // Stops the iPad from opening a new Safari tab
+        }
+        return realOpen(url);
+      };
+
+      // 2. TRIGGER THE ACTUAL ENGINE:
+      // We search for your existing 'Print' button in the header actions.
+      const existingBtns = Array.from(document.querySelectorAll('header .actions .btn, .tools .btn'));
+      const engineBtn = existingBtns.find(b => 
+        b.textContent.toLowerCase().includes('print') || 
+        b.textContent.toLowerCase().includes('pdf')
+      );
+
+      if (engineBtn) {
+        engineBtn.click();
+      } else {
+        alert("Report engine not found. Please ensure data is loaded.");
+      }
+
+      // 3. RESTORE: Put window.open back
+      setTimeout(() => { window.open = realOpen; }, 2000);
+
+    } catch (err) {
+      console.error("Relay Export failed:", err);
+    } finally {
+      pwaBtn.innerHTML = originalText;
+      pwaBtn.disabled = false;
+    }
+  }
+
+  function injectPwaButton() {
+    const actions = document.querySelector('.actions');
+    if (!actions || document.getElementById('pwa-safe-export')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'pwa-safe-export';
+    btn.type = 'button';
+    btn.className = 'btn small';
+    // Deep Green branded styling matching Birds Charcoal
+    btn.style.cssText = "background: #10b981 !important; color: #0b0f14 !important; border:none; margin-left:8px; font-weight:900; box-shadow: 0 2px 8px rgba(0,0,0,0.4);";
+    btn.innerHTML = '📄 Download PDF';
+
+    btn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerRelayExport();
+    };
+
+    actions.appendChild(btn);
+  }
+
+  if (document.readyState === 'complete') injectPwaButton();
+  else window.addEventListener('load', injectPwaButton);
+})();
+
+// ===== Script block 13 =====
+// ===== SharePoint Sync: Write actions to Open/ folder =====
+  async function syncActionsToSharePoint() {
+    try {
+      if (typeof GraphClient === 'undefined' || typeof BirdsAuth === 'undefined' || !BirdsAuth.isLoggedIn()) return;
+      var items = getActionItems();
+      if (!items.length) return;
+      var store = (document.getElementById('storeName') && document.getElementById('storeName').value) || 'Unknown';
+      var date = (document.getElementById('auditDate') && document.getElementById('auditDate').value) || new Date().toISOString().slice(0, 10);
+      var payload = {
+        storeName: store,
+        date: date,
+        actions: items.map(function(a) {
+          return {
+            sector: a.sector, category: a.category, questionId: a.id,
+            question: a.text, answer: a.answer || '',
+            description: (a.action && a.action.description) || '',
+            personResponsible: (a.action && a.action.person) || '',
+            actionNeeded: (a.action && a.action.actionNeeded) || '',
+            status: (a.action && a.action.status) || 'Open',
+            critical: (a.action && a.action.critical) ? 'Yes' : 'No'
+          };
+        })
+      };
+      var safeStore = store.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      var safeDate = date.replace(/\//g, '-');
+      var fileName = safeStore + '-' + safeDate + '.json';
+      await GraphClient.ensureFolder('Open');
+      await GraphClient.writeFile('Open/' + fileName, JSON.stringify(payload, null, 2));
+      console.log('[SharePoint] Actions synced to Open/' + fileName);
+    } catch(e) {
+      console.warn('[SharePoint] Sync failed (optional):', e.message);
+    }
+  }
+  // Override quickSaveNow to also sync to SharePoint
+  var _origQuickSaveNow = quickSaveNow;
+  quickSaveNow = function() {
+    return _origQuickSaveNow().then(function(ok) {
+      syncActionsToSharePoint();
+      return ok;
+    });
+  };
