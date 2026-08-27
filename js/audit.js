@@ -44,6 +44,7 @@
     var nav = { level: 'sectors', sectorId: null, categoryId: null };
     function render() {
       $('#storeName').value = state.meta.store || '';
+      if ($('#storeEmail')) $('#storeEmail').value = state.meta.email || '';
       $('#auditDate').value = state.meta.date || '';
       $('#auditorName').value = state.meta.auditor || '';
       $('#storeManager').value = state.meta.manager || '';
@@ -548,6 +549,7 @@ function updateOverallScore() {
     function exportHTML() {
       // Meta 
       state.meta.store = $('#storeName').value.trim();
+      if ($('#storeEmail')) state.meta.email = $('#storeEmail').value.trim();
       state.meta.date = $('#auditDate').value || new Date().toISOString().slice(0, 10);
       state.meta.auditor = $('#auditorName').value.trim();
       state.meta.manager = $('#storeManager').value.trim();
@@ -945,6 +947,7 @@ var p=document.getElementById('btnPrint'); if(p){ p.addEventListener('click', fu
       } catch (e) {}
 
       state.meta.store = $('#storeName').value.trim();
+      if ($('#storeEmail')) state.meta.email = $('#storeEmail').value.trim();
       state.meta.date = $('#auditDate').value || new Date().toISOString().slice(0, 10);
       state.meta.auditor = $('#auditorName').value.trim();
       state.meta.manager = $('#storeManager').value.trim();
@@ -1432,6 +1435,21 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
     }
 
     // ===== Export Audit ZIP (main app compatible format) =====
+    // ===== Resolve correct categoryId from EMBEDDED_QUESTIONS by questionId =====
+    function resolveCategoryId(questionId) {
+      if (typeof EMBEDDED_QUESTIONS === 'undefined' || !EMBEDDED_QUESTIONS) return null;
+      for (var esid in EMBEDDED_QUESTIONS) {
+        var esec = EMBEDDED_QUESTIONS[esid];
+        for (var i = 0; i < (esec.categories || []).length; i++) {
+          var ecat = esec.categories[i];
+          for (var j = 0; j < (ecat.questions || []).length; j++) {
+            if (ecat.questions[j].id === questionId) return ecat.id;
+          }
+        }
+      }
+      return null;
+    }
+
     function exportAuditZIP() {
       if (typeof JSZip === 'undefined') { alert('JSZip library not loaded. Check internet connection.'); return; }
       var zip = new JSZip();
@@ -1452,7 +1470,7 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
             if (q.answer === 'Pass' || q.answer === 'Fail' || q.answer === 'NA') {
               questions.push({
                 sectorId: sid,
-                categoryId: cat.id,
+                categoryId: resolveCategoryId(q.id) || cat.id,
                 questionId: q.id,
                 answer: q.answer,
                 comment: q.comment || ''
@@ -1487,7 +1505,7 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
       // Build metadata
       var metadata = {
         storeName: store,
-        storeEmail: '',
+        storeEmail: (document.getElementById('storeEmail') ? document.getElementById('storeEmail').value.trim() : '') || '',
         branchId: '',
         manager: manager,
         auditor: auditor,
@@ -1515,14 +1533,16 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
             if (q3.photo) {
               var base64Data = q3.photo.split(',')[1];
               if (base64Data) {
-                photosFolder.file(sid3 + '_' + cat3.id + '_' + q3.id + '.jpg', base64Data, { base64: true });
+                var catId3 = resolveCategoryId(q3.id) || cat3.id;
+                photosFolder.file(sid3 + '_' + catId3 + '_' + q3.id + '.jpg', base64Data, { base64: true });
                 photoCount++;
               }
             }
             if (q3.extraPhoto) {
               var base64Extra = q3.extraPhoto.split(',')[1];
               if (base64Extra) {
-                photosFolder.file(sid3 + '_' + cat3.id + '_' + q3.id + '_extra.jpg', base64Extra, { base64: true });
+                var catId4 = resolveCategoryId(q3.id) || cat3.id;
+                photosFolder.file(sid3 + '_' + catId4 + '_' + q3.id + '_extra.jpg', base64Extra, { base64: true });
                 photoCount++;
               }
             }
@@ -1583,7 +1603,7 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
     document.getElementById('logoPicker').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { state.watermark = r.result; try { localStorage.setItem('audit_watermark_v2', r.result); } catch (e) { } applyWatermarkToPage(); applyBuildModeUI(); quickSave(); }; r.readAsDataURL(f); });
     document.getElementById('saveTemplateBtn').addEventListener('click', exportJSON);
     document.getElementById('seedPicker').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var fr = new FileReader(); fr.onload = function () { try { var seed = JSON.parse(fr.result); purgeAllWorkingCopies(); buildStateFromSeed(seed); nav = { level: 'sectors', sectorId: null, categoryId: null }; render(); toast('Questions loaded ✓'); } catch (err) { alert('Invalid JSON: ' + err.message); } }; fr.readAsText(f, 'utf-8'); });
-    ['#storeName', '#auditDate', '#auditorName', '#storeManager', '#areaManager'].forEach(function (sel) { document.querySelector(sel).addEventListener('input', function () { state.meta.store = $('#storeName').value.trim(); state.meta.date = $('#auditDate').value; state.meta.auditor = $('#auditorName').value.trim(); state.meta.manager = $('#storeManager').value.trim(); state.meta.areaManager = $('#areaManager').value.trim(); quickSave(); }); });
+    ['#storeName', '#storeEmail', '#auditDate', '#auditorName', '#storeManager', '#areaManager'].forEach(function (sel) { var el2 = document.querySelector(sel); if (el2) el2.addEventListener('input', function () { state.meta.store = $('#storeName').value.trim(); if ($('#storeEmail')) state.meta.email = $('#storeEmail').value.trim(); state.meta.date = $('#auditDate').value; state.meta.auditor = $('#auditorName').value.trim(); state.meta.manager = $('#storeManager').value.trim(); state.meta.areaManager = $('#areaManager').value.trim(); quickSave(); }); });
     
     // ✅ NEW: Ensure the Auditor Feedback box actively autosaves every keystroke to prevent data loss
     var afInput = document.getElementById('auditorFeedback');
