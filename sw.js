@@ -1,4 +1,4 @@
-const CACHE_NAME = 'birds-audit-v3';
+const CACHE_NAME = 'birds-audit-v4';
 const ASSETS = [
   './',
   './index.html',
