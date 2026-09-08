@@ -34,7 +34,7 @@
     document.getElementById('hdrLogo').src = EMBEDDED_LOGO;
     // ===== State ===== 
     var WORK_KEY_BASE = 'audit_app_v2_modular';
-    var state = { meta: { store: '', date: '', auditor: '', manager: '', areaManager: '', auditorFeedback: '' }, watermark: loadWatermark(), sectors: {} };
+    var state = { meta: { store: '', date: '', auditor: '', manager: '', areaManager: '', auditorFeedback: '', auditType: 'full' }, watermark: loadWatermark(), sectors: {} };
 
     // ===== Embedded Question Bank (AuditQuestions.json) =====
     var EMBEDDED_QUESTIONS = {
@@ -2520,9 +2520,9 @@ async function makeThumb(dataURL, size, mime, quality) {
         || q.answer === 'Fail'
         || q.answer === 'NA';
     }
-    function setSaveStatus(mode) { var el = document.getElementById('saveStatus'); if (!el) return; el.classList.remove('saving', 'error'); if (mode === 'saving') { el.textContent = 'Saving…'; el.classList.add('saving'); } else if (mode === 'error') { el.textContent = 'Not saved'; el.classList.add('error'); } else { el.textContent = 'Saved'; } }
-    function updateFloatingScore() { try { var pct = document.getElementById('scorePct').textContent.replace('%', '') || '0'; var open = document.getElementById('openActions').textContent || '0'; var b = document.getElementById('floatingScore'); if (!b) return; b.textContent = 'Score: ' + pct + '% • Actions: ' + open; b.style.display = 'block'; } catch (_) { } }
-    function buildSectorDrawer() { var host = document.getElementById('sectorDrawerList'); if (!host) return; host.innerHTML = ''; for (var sid in state.sectors) { var sec = state.sectors[sid]; var t = tallySector(sid); var card = el('div', { 'class': 'drawer-card' }); card.appendChild(el('div', { 'class': 't' }, [sec.title])); card.appendChild(el('div', { 'class': 'm' }, ['Answered: ' + t.answered + ' • Open actions: ' + t.open + ' • Score: ' + t.pct + '%'])); (function (s) { card.addEventListener('click', function () { nav = { level: 'categories', sectorId: s, categoryId: null }; closeDrawer(); render(); }); })(sid); host.appendChild(card); } }
+    function setSaveStatus(mode) { var el = document.getElementById('saveStatus'); if (!el) return; el.classList.remove('saving', 'error'); if (mode === 'saving') { el.textContent = 'Savingï¿½'; el.classList.add('saving'); } else if (mode === 'error') { el.textContent = 'Not saved'; el.classList.add('error'); } else { el.textContent = 'Saved'; } }
+    function updateFloatingScore() { try { var pct = document.getElementById('scorePct').textContent.replace('%', '') || '0'; var open = document.getElementById('openActions').textContent || '0'; var b = document.getElementById('floatingScore'); if (!b) return; b.textContent = 'Score: ' + pct + '% ï¿½ Actions: ' + open; b.style.display = 'block'; } catch (_) { } }
+    function buildSectorDrawer() { var host = document.getElementById('sectorDrawerList'); if (!host) return; host.innerHTML = ''; for (var sid in state.sectors) { var sec = state.sectors[sid]; var t = tallySector(sid); var card = el('div', { 'class': 'drawer-card' }); card.appendChild(el('div', { 'class': 't' }, [sec.title])); card.appendChild(el('div', { 'class': 'm' }, ['Answered: ' + t.answered + ' ï¿½ Open actions: ' + t.open + ' ï¿½ Score: ' + t.pct + '%'])); (function (s) { card.addEventListener('click', function () { nav = { level: 'categories', sectorId: s, categoryId: null }; closeDrawer(); render(); }); })(sid); host.appendChild(card); } }
     function openDrawer() { var d = document.getElementById('sectorDrawer'); if (!d) return; buildSectorDrawer(); d.style.bottom = '0'; }
     function closeDrawer() { var d = document.getElementById('sectorDrawer'); if (!d) return; d.style.bottom = '-70vh'; }
     (function () { var sx = 0, sy = 0, t0 = 0; document.addEventListener('touchstart', function (e) { var t = e.touches && e.touches[0]; if (!t) return; sx = t.clientX; sy = t.clientY; t0 = Date.now(); }, { passive: true }); document.addEventListener('touchend', function (e) { var t = e.changedTouches && e.changedTouches[0]; if (!t) return; var dx = t.clientX - sx, dy = Math.abs(t.clientY - sy), dt = Date.now() - t0; if (sx <= 24 && dx > 60 && dy < 40 && dt < 600) { if (nav.level === 'questions') { nav = { level: 'categories', sectorId: nav.sectorId, categoryId: null }; render(); } else if (nav.level === 'categories') { nav = { level: 'sectors', sectorId: null, categoryId: null }; render(); } } }, { passive: true }); })();
@@ -2613,7 +2613,7 @@ function updateOverallScore() {
     function renderActionPlan() { var body = $('#apBody'); if (!body) return; body.innerHTML = ''; var statusFilter = ($('#apFilterStatus') && $('#apFilterStatus').value) || 'open'; var items = getActionItems(); if (statusFilter !== 'all') { items = items.filter(function (a) { return String((a.action && a.action.status) || 'Open').toLowerCase() === statusFilter; }); } items.sort(function (a, b) { return (b.action.critical ? 1 : 0) - (a.action.critical ? 1 : 0); }); $('#apCount').textContent = items.length + ' item' + (items.length === 1 ? '' : 's'); items.forEach(function (a) { var tr = document.createElement('tr'); tr.dataset.qid = a.id; tr.title = 'Click to open the related question'; tr.setAttribute('role', 'button'); var critical = a.action.critical ? '<span style="color:#dc2626;font-weight:bold;">CRITICAL</span>' : ''; tr.innerHTML = '<td>' + esc(a.sector) + ' / ' + esc(a.category) + '</td>' + '<td>' + esc((a.action && a.action.description) || '') + '</td>' + '<td>' + esc((a.action && a.action.person) || '') + '</td>' + '<td>' + esc((a.action && a.action.actionNeeded) || '') + '</td>' + '<td>' + esc((a.action && a.action.status) || '') + '</td>' + '<td>' + esc((a.action && a.action.closedOn) || '') + '</td>' + '<td style="text-align:center;">' + critical + '</td>' + '<td style="text-align:center;">' + (a.photoThumb_removed ? '<img src="' + a.photoThumb_removed + '" width="40" height="40" style="border-radius:6px;border:1px solid var(--border);object-fit:cover">' : (a.photo ? 'Yes' : '')) + '</td>'; tr.addEventListener('click', function () { var path = findQuestionPath(a.id); if (!path) return; nav = { level: 'questions', sectorId: path.sectorId, categoryId: path.categoryId }; render(); setTimeout(function () { scrollQuestionById(a.id); }, 50); }); body.appendChild(tr); }); }
     function exportFullCSV() {
       var hdr = [
-        'StoreName', 'Auditor', 'Manager', 'AreaManager', 'Date',
+        'StoreName', 'Auditor', 'Manager', 'AreaManager', 'Date', 'AuditType',
         'Sector', 'Category', 'QuestionID', 'Question', 'Answer', 'Weight',
         'Comment', 'PhotoPresent', 'PhotoThumbPresent',
         'AP Enabled', 'AP Status', 'AP Description', 'PersonResponsible', 'ActionNeeded', 'ClosedOn', 'Critical'
@@ -2631,8 +2631,9 @@ function updateOverallScore() {
           (cat.questions || []).forEach(function (qn) {
             if (qn.answer === 'Pass' || qn.answer === 'Fail') {
               var action = qn.action || {};
+              var csvAuditType = (document.getElementById('auditType') ? document.getElementById('auditType').value : 'full') || 'full';
               lines.push([
-                q(store), q(aud), q(man), q(areaMan), q(d),
+                q(store), q(aud), q(man), q(areaMan), q(d), q(csvAuditType),
                 q(sec.title), q(cat.name), q(qn.id), q(qn.text), q(qn.answer), q(qn.weight),
                 q(qn.comment || ''), q(qn.photo ? 'Yes' : ''), q(qn.photoThumb_removed ? 'Yes' : ''),
                 q(action.enabled ? 'Yes' : 'No'), q(action.status || ''), q(action.description || ''), q(action.person || ''), q(action.actionNeeded || ''), q(action.closedOn || ''), q(action.critical ? 'Yes' : 'No')
@@ -2796,6 +2797,7 @@ function updateOverallScore() {
       state.meta.auditor = $('#auditorName').value.trim();
       state.meta.manager = $('#storeManager').value.trim();
       state.meta.areaManager = $('#areaManager').value.trim();
+      state.meta.auditType = ($('#auditType') ? $('#auditType').value : 'full') || 'full';
       // Build runtime payload 
       var runtimeItems = []; var answeredBySector = new Map();
       for (var sid in state.sectors) {
@@ -3194,8 +3196,10 @@ var p=document.getElementById('btnPrint'); if(p){ p.addEventListener('click', fu
       state.meta.auditor = $('#auditorName').value.trim();
       state.meta.manager = $('#storeManager').value.trim();
       state.meta.areaManager = $('#areaManager').value.trim();
+      state.meta.auditType = ($('#auditType') ? $('#auditType').value : 'full') || 'full';
 
       var store = state.meta.store, aud = state.meta.auditor, man = state.meta.manager, areaMan = state.meta.areaManager, d = state.meta.date;
+      var auditTypeLabel = state.meta.auditType === 'eho_check' ? 'Internal EHO Check' : 'Full Audit';
       var logo = state.watermark || EMBEDDED_LOGO;
 
       
@@ -3253,6 +3257,7 @@ for (var sid in state.sectors) {
       pdfHTML += '<div class="score-display"><div class="score-pct">' + pct + '%</div><div class="score-band">' + (anySectorFailed ? 'Overall Score (FAILED)' : 'Overall Score') + '</div></div>';
       pdfHTML += '<div class="meta-info">';
       pdfHTML += '<div class="meta-row"><b>Store:</b> ' + esc(store) + '</div>';
+      pdfHTML += '<div class="meta-row"><b>Audit Type:</b> ' + esc(auditTypeLabel) + '</div>';
       pdfHTML += '<div class="meta-row"><b>Auditor:</b> ' + esc(aud) + '</div>';
       pdfHTML += '<div class="meta-row"><b>Store Manager:</b> ' + esc(man) + '</div>';
       pdfHTML += '<div class="meta-row"><b>Area Manager:</b> ' + esc(areaMan) + '</div>';
@@ -3460,7 +3465,7 @@ function quickSave() {
     quickSaveNow();
   }, QS_DEBOUNCE_MS);
 }
-function clearWorkingCopy() { if (!confirm('Clear all progress on this page? This cannot be undone.')) return; state.meta = { store: '', date: '', auditor: '', manager: '', areaManager: '', auditorFeedback: '' }; state.sectors = {}; removeStateFromStorage(currentWorkKey()).then(function () { render(); }).catch(function () { render(); }); }
+function clearWorkingCopy() { if (!confirm('Clear all progress on this page? This cannot be undone.')) return; state.meta = { store: '', date: '', auditor: '', manager: '', areaManager: '', auditorFeedback: '', auditType: 'full' }; state.sectors = {}; removeStateFromStorage(currentWorkKey()).then(function () { render(); }).catch(function () { render(); }); }
     function saveStateToStorage(key, fullState) {
   var payload = JSON.stringify(cloneWithoutHeavyBits(fullState));
   var wroteLocal = false;
@@ -3603,15 +3608,21 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
     // ===== Loading seeds (manual upload) ===== 
     function buildStateFromSeed(seed) {
       var sectors = (seed && seed.sectors) ? seed.sectors : (seed || {});
+      var auditType = (document.getElementById('auditType') ? document.getElementById('auditType').value : 'full') || 'full';
+      /* Filter sectors based on audit type */
+      var allowedSectors = auditType === 'eho_check' ? ['customer', 'food', 'birds_focus'] : null;
+      var excludeCats = auditType === 'eho_check' ? { food: ['energy'] } : {};
       var next = {};
       for (var key in sectors) {
+        if (allowedSectors && allowedSectors.indexOf(key) === -1) continue;
         var sec = sectors[key]; var cats = []; (sec.categories || []).forEach(function (cat) {
+          if (excludeCats[key] && excludeCats[key].indexOf(cat.id) !== -1) return;
           var qs = []; (cat.questions || []).forEach(function (q) {
             var text = (typeof q === 'string') ? q : (q && q.text ? q.text : '');
             var weight = (typeof q === 'object' && (q.weight != null || q.weighting != null)) ? Number(q.weight ?? q.weighting) || 1 : 1;
             qs.push({ id: (q && q.id) ? q.id : uid(), text: text, weight: weight, answer: null, photo: null, photoThumb_removed: null, action: null, comment: '' });
           }); cats.push({ id: uid(), name: cat.name, questions: qs });
-        }); next[key] = { title: sec.title, categories: cats };
+        }); if (cats.length > 0) next[key] = { title: sec.title, categories: cats };
       }
       state.sectors = next;
     }
@@ -3745,6 +3756,7 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
       }
 
       // Build metadata
+      var auditType = (document.getElementById('auditType') ? document.getElementById('auditType').value : 'full') || 'full';
       var metadata = {
         storeName: store,
         storeEmail: (document.getElementById('storeEmail') ? document.getElementById('storeEmail').value.trim() : '') || '',
@@ -3754,7 +3766,8 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
         areaManager: areaManager,
         date: d,
         summary: summary,
-        isTraining: false
+        isTraining: false,
+        auditType: auditType
       };
 
       // Create audit_session.json
@@ -3845,7 +3858,10 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
     document.getElementById('logoPicker').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { state.watermark = r.result; try { localStorage.setItem('audit_watermark_v2', r.result); } catch (e) { } applyWatermarkToPage(); applyBuildModeUI(); quickSave(); }; r.readAsDataURL(f); });
     document.getElementById('saveTemplateBtn').addEventListener('click', exportJSON);
     document.getElementById('seedPicker').addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; var fr = new FileReader(); fr.onload = function () { try { var seed = JSON.parse(fr.result); purgeAllWorkingCopies(); buildStateFromSeed(seed); nav = { level: 'sectors', sectorId: null, categoryId: null }; render(); toast('Questions loaded ?'); } catch (err) { alert('Invalid JSON: ' + err.message); } }; fr.readAsText(f, 'utf-8'); });
-    ['#storeName', '#storeEmail', '#auditDate', '#auditorName', '#storeManager', '#areaManager'].forEach(function (sel) { var el2 = document.querySelector(sel); if (el2) el2.addEventListener('input', function () { state.meta.store = $('#storeName').value.trim(); if ($('#storeEmail')) state.meta.email = $('#storeEmail').value.trim(); state.meta.date = $('#auditDate').value; state.meta.auditor = $('#auditorName').value.trim(); state.meta.manager = $('#storeManager').value.trim(); state.meta.areaManager = $('#areaManager').value.trim(); quickSave(); }); });
+    ['#storeName', '#storeEmail', '#auditDate', '#auditorName', '#storeManager', '#areaManager'].forEach(function (sel) { var el2 = document.querySelector(sel); if (el2) el2.addEventListener('input', function () { state.meta.store = $('#storeName').value.trim(); if ($('#storeEmail')) state.meta.email = $('#storeEmail').value.trim(); state.meta.date = $('#auditDate').value; state.meta.auditor = $('#auditorName').value.trim(); state.meta.manager = $('#storeManager').value.trim(); state.meta.areaManager = $('#areaManager').value.trim(); state.meta.auditType = ($('#auditType') ? $('#auditType').value : 'full') || 'full'; quickSave(); }); });
+    /* Audit type change triggers sector rebuild */
+    var auditTypeEl = document.getElementById('auditType');
+    if (auditTypeEl) { auditTypeEl.addEventListener('change', function () { state.meta.auditType = this.value || 'full'; buildStateFromSeed(EMBEDDED_QUESTIONS); render(); quickSave(); }); }
     
     // ? NEW: Ensure the Auditor Feedback box actively autosaves every keystroke to prevent data loss
     var afInput = document.getElementById('auditorFeedback');
@@ -3878,9 +3894,9 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
         try {
           var pct = (document.getElementById('scorePct')?.textContent || '0').replace('%', '');
           var open = (document.getElementById('openActions')?.textContent || '0');
-          var b = document.getElementById('floatingScore'); if (b) { b.textContent = 'Score: ' + pct + '% • Actions: ' + open; b.style.display = 'block'; }
-          var pill = document.getElementById('mbarScore'); if (pill) { pill.textContent = 'Score: ' + pct + '% • Actions: ' + open; pill.style.display = 'block'; }
-          var dock = document.getElementById('scoreDock'); if (dock) { dock.textContent = 'Score: ' + pct + '% • Actions: ' + open; dock.style.display = 'block'; }
+          var b = document.getElementById('floatingScore'); if (b) { b.textContent = 'Score: ' + pct + '% ï¿½ Actions: ' + open; b.style.display = 'block'; }
+          var pill = document.getElementById('mbarScore'); if (pill) { pill.textContent = 'Score: ' + pct + '% ï¿½ Actions: ' + open; pill.style.display = 'block'; }
+          var dock = document.getElementById('scoreDock'); if (dock) { dock.textContent = 'Score: ' + pct + '% ï¿½ Actions: ' + open; dock.style.display = 'block'; }
         } catch (e) { }
       };
       // In Audit mode, hide header controls except: Load JSON, Clear, Export, ZIP
@@ -3903,7 +3919,7 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
       document.addEventListener('DOMContentLoaded', function () {
         var bar = document.querySelector('.mbar');
         if (bar && !document.getElementById('mbarScore')) {
-          var pill = document.createElement('div'); pill.id = 'mbarScore'; pill.className = 'btn ghost'; pill.setAttribute('role', 'status'); pill.setAttribute('aria-live', 'polite'); pill.textContent = 'Score: 0% • Actions: 0';
+          var pill = document.createElement('div'); pill.id = 'mbarScore'; pill.className = 'btn ghost'; pill.setAttribute('role', 'status'); pill.setAttribute('aria-live', 'polite'); pill.textContent = 'Score: 0% ï¿½ Actions: 0';
           pill.style.gridColumn = 'span 2'; pill.style.textAlign = 'center';
           bar.insertBefore(pill, bar.firstChild);
         }
@@ -4001,7 +4017,7 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
         var sel = doc.createElement('select'); sel.id = 'storeSelector';
         sel.style.cssText = 'max-width:100%;padding:10px;border:1px solid var(--border,#cbd5e1);border-radius:10px;background:#fff;color:#111;display:block;margin-top:8px;';
         var html = '<option value="">(Select store)</option>';
-        EMAIL_MAP.forEach(function (email, name) { html += '<option value="' + email + '">' + name + ' — ' + email + '</option>'; });
+        EMAIL_MAP.forEach(function (email, name) { html += '<option value="' + email + '">' + name + ' ï¿½ ' + email + '</option>'; });
         sel.innerHTML = html;
         var label = storeInput.closest('label');
         if (label && label.parentNode) {
@@ -4011,7 +4027,7 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
           try { storeInput.parentNode.insertBefore(sel, storeInput); } catch (e) { storeInput.before(sel); }
         }
         var match = EMAIL_MAP.get(normalizeName(storeInput.value || '')); if (match) sel.value = match;
-        sel.addEventListener('change', function () { var opt = sel.options[sel.selectedIndex]; var v = opt ? opt.text : ''; var n = v.split(' — ')[0] || ''; if (n) storeInput.value = n; });
+        sel.addEventListener('change', function () { var opt = sel.options[sel.selectedIndex]; var v = opt ? opt.text : ''; var n = v.split(' ï¿½ ')[0] || ''; if (n) storeInput.value = n; });
         storeInput.addEventListener('blur', function () { var m = EMAIL_MAP.get(normalizeName(storeInput.value || '')); if (m && sel.value !== m) sel.value = m; });
         return sel;
       }
@@ -4151,7 +4167,7 @@ function bakeAuditor(doc) {
 
 // ===== Script block 10 =====
 /* ===============================================================
-       ? PART 1 — SCORE HELPERS
+       ? PART 1 ï¿½ SCORE HELPERS
     =============================================================== */
     
 function computeFullScore() {
@@ -4161,7 +4177,7 @@ function computeFullScore() {
 
 
     /* ===============================================================
-       ? PART 2 — AP-ONLY ROW EXTRACTOR
+       ? PART 2 ï¿½ AP-ONLY ROW EXTRACTOR
     =============================================================== */
     function getAPRowsOnly() {
       let rows = [];
@@ -4226,7 +4242,7 @@ function computeFullScore() {
 
 
     /* ===============================================================
-       ? PART 4 — TEMP STORE MANAGER (unchanged)
+       ? PART 4 ï¿½ TEMP STORE MANAGER (unchanged)
     =============================================================== */
     (function StoreManagerModule() {
       let tempStores = [];
@@ -4247,7 +4263,7 @@ function computeFullScore() {
         tempStores.forEach(s => {
           const opt = document.createElement("option");
           opt.value = s.email;
-          opt.textContent = `${s.name} — ${s.email} (temporary)`;
+          opt.textContent = `${s.name} ï¿½ ${s.email} (temporary)`;
           opt.dataset.tempStore = "1";
           sel.appendChild(opt);
         });
