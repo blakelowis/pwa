@@ -4026,9 +4026,26 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
         } else if (storeInput.parentNode) {
           try { storeInput.parentNode.insertBefore(sel, storeInput); } catch (e) { storeInput.before(sel); }
         }
-        var match = EMAIL_MAP.get(normalizeName(storeInput.value || '')); if (match) sel.value = match;
-        sel.addEventListener('change', function () { var opt = sel.options[sel.selectedIndex]; var v = opt ? opt.text : ''; var n = v.split(' � ')[0] || ''; if (n) storeInput.value = n; });
-        storeInput.addEventListener('blur', function () { var m = EMAIL_MAP.get(normalizeName(storeInput.value || '')); if (m && sel.value !== m) sel.value = m; });
+        var match = EMAIL_MAP.get(normalizeName(storeInput.value || ''));
+        if (match) {
+          sel.value = match;
+          var storeEmail = byId(doc, 'storeEmail');
+          if (storeEmail) storeEmail.value = match;
+        }
+        sel.addEventListener('change', function () {
+          var opt = sel.options[sel.selectedIndex];
+          var v = opt ? opt.text : '';
+          var n = v.split(' � ')[0] || '';
+          if (n) storeInput.value = n;
+          var storeEmail = byId(doc, 'storeEmail');
+          if (storeEmail) storeEmail.value = sel.value || '';
+        });
+        storeInput.addEventListener('blur', function () {
+          var m = EMAIL_MAP.get(normalizeName(storeInput.value || ''));
+          if (m && sel.value !== m) sel.value = m;
+          var storeEmail = byId(doc, 'storeEmail');
+          if (storeEmail) storeEmail.value = sel.value || '';
+        });
         return sel;
       }
 
