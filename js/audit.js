@@ -3435,6 +3435,38 @@ pdfHTML += (s.failed ? '' : (s.penalty ? '<div style=\"font-size:11px;color:#924
       }
       pdfHTML += '</div>';
 
+      // Evidence Photos (supplementary photos 2 & 3)
+      pdfHTML += '<div class="page">';
+      pdfHTML += '<div class="section-title">Evidence Photos</div>';
+      var evidenceItems = [];
+      for (var esid in state.sectors) {
+        var esec = state.sectors[esid];
+        (esec.categories || []).forEach(function (ecat) {
+          (ecat.questions || []).forEach(function (eq) {
+            var ePhotos = [];
+            if (eq.extraPhoto || eq.extraPhotoThumb) ePhotos.push(eq.extraPhoto || eq.extraPhotoThumb);
+            if (eq.extraPhoto2 || eq.extraPhoto2Thumb) ePhotos.push(eq.extraPhoto2 || eq.extraPhoto2Thumb);
+            if (ePhotos.length > 0) {
+              evidenceItems.push({ sector: esec.title, category: ecat.name, text: eq.text, photos: ePhotos });
+            }
+          });
+        });
+      }
+      if (evidenceItems.length === 0) {
+        pdfHTML += '<p style="color:#999;">No supplementary evidence photos.</p>';
+      } else {
+        evidenceItems.forEach(function (ev) {
+          pdfHTML += '<div class="comment-block">';
+          pdfHTML += '<div class="comment-q">' + esc(ev.sector) + ' / ' + esc(ev.category) + '</div>';
+          pdfHTML += '<div class="comment-text">' + esc(ev.text) + '</div>';
+          ev.photos.forEach(function (ph) {
+            pdfHTML += '<img class="comment-photo" src="' + ph + '" alt="Evidence"/>';
+          });
+          pdfHTML += '</div>';
+        });
+      }
+      pdfHTML += '</div>';
+
       // Page 3+: All Answered Questions
       pdfHTML += '<div class="page">';
       pdfHTML += '<div class="section-title">All Answered Questions</div>';
