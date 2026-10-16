@@ -2410,16 +2410,70 @@ document.addEventListener('visibilitychange', function(){
         head.appendChild(weightWrap);
       })();
       wrap.appendChild(head);
-      // Photo 
+      // Photo — 3 slots: main + 2 evidence
       var ph = el('div', { 'class': 'photo' });
-      var lab = el('label', {}, ['Add photo']);
-      var inp = el('input', {}); inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
-      var img = el('img', { 'class': 'thumb', 'id': 'thumb_' + qn.id });
-      var dlLink = el('a', { style: 'display:none; color:#10b981; font-size:12px; cursor:pointer; text-decoration:underline; padding-left:10px;' }, ['Download Full Image']);
-      if (qn.photo) { dlLink.style.display = 'block'; img.src = qn.photoThumb_removed || qn.photo; img.style.display = 'block'; }
-      dlLink.onclick = function(ev) { ev.preventDefault(); if (qn.photo) downloadDataUrl(qn.photo, 'Evidence_' + qn.id + '.jpg'); };
-      lab.appendChild(inp); ph.appendChild(lab); ph.appendChild(img); ph.appendChild(dlLink);
-      inp.addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (!f) return; (async function () { try { var data = await readFileAsDataURL(f); var thumb = await makeThumb(data, 1200, 'image/jpeg', 0.5); qn.photo = data; qn.photoThumb_removed = thumb; img.src = thumb; img.style.display = 'block'; dlLink.style.display = 'block'; } catch (err) { var fr = new FileReader(); fr.onload = function () { qn.photo = fr.result; img.src = fr.result; img.style.display = 'block'; dlLink.style.display = 'block'; }; fr.readAsDataURL(f); } quickSave(); renderActionPlan(); updateFloatingScore(); })(); });
+      var photoSlots = [
+        { key: 'photo', thumbKey: 'photoThumb_removed', label: 'Photo 1' },
+        { key: 'extraPhoto', thumbKey: 'extraPhotoThumb', label: 'Evidence 1' },
+        { key: 'extraPhoto2', thumbKey: 'extraPhoto2Thumb', label: 'Evidence 2' }
+      ];
+      var lab = el('label', { style: 'cursor:pointer; font-weight:bold; color:#10b981;' }, ['+ Add photo (' + photoSlots.filter(function(s){ return !qn[s.key]; }).length + ' slots left)']);
+      var inp = el('input', {}); inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment'; inp.style.display = 'none';
+      lab.addEventListener('click', function() { inp.click(); });
+      ph.appendChild(lab);
+
+      function renderPhotoSlots() {
+        // Remove old thumbnails (keep label + input)
+        var toRemove = ph.querySelectorAll('.photo-slot');
+        for (var ri = 0; ri < toRemove.length; ri++) toRemove[ri].remove();
+        var emptyCount = 0;
+        photoSlots.forEach(function(slot, idx) {
+          var wrapper = el('div', { 'class': 'photo-slot', style: 'display:inline-block; margin:4px; vertical-align:top; text-align:center;' });
+          if (qn[slot.key]) {
+            var thumb = el('img', { 'class': 'thumb', style: 'width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid #10b981;' });
+            thumb.src = qn[slot.thumbKey] || qn[slot.key];
+            var dl = el('a', { style: 'display:block; color:#10b981; font-size:10px; cursor:pointer; text-decoration:underline;' }, ['Download ' + slot.label]);
+            dl.onclick = function(ev) { ev.preventDefault(); downloadDataUrl(qn[slot.key], slot.label.replace(/\s/g,'_') + '_' + qn.id + '.jpg'); };
+            var rm = el('a', { style: 'display:block; color:#dc2626; font-size:10px; cursor:pointer; text-decoration:underline;' }, ['Remove']);
+            rm.onclick = function() { qn[slot.key] = null; qn[slot.thumbKey] = null; renderPhotoSlots(); quickSave(); renderActionPlan(); updateFloatingScore(); };
+            wrapper.appendChild(thumb); wrapper.appendChild(dl); wrapper.appendChild(rm);
+          } else {
+            emptyCount++;
+            var placeholder = el('div', { style: 'width:80px; height:80px; border:2px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:10px;' }, ['Empty']);
+            wrapper.appendChild(placeholder);
+          }
+          ph.appendChild(wrapper);
+        });
+        lab.textContent = '+ Add photo (' + emptyCount + ' slot' + (emptyCount !== 1 ? 's' : '') + ' left)';
+      }
+      renderPhotoSlots();
+
+      inp.addEventListener('change', function (e) {
+        var f = e.target.files && e.target.files[0]; if (!f) return;
+        (async function () {
+          try {
+            var data = await readFileAsDataURL(f);
+            var thumb = await makeThumb(data, 1200, 'image/jpeg', 0.5);
+            // Find first empty slot
+            var target = null;
+            for (var si = 0; si < photoSlots.length; si++) { if (!qn[photoSlots[si].key]) { target = photoSlots[si]; break; } }
+            if (!target) { alert('All 3 photo slots are full. Remove one first.'); return; }
+            qn[target.key] = data; qn[target.thumbKey] = thumb;
+            renderPhotoSlots(); quickSave(); renderActionPlan(); updateFloatingScore();
+          } catch (err) {
+            var fr = new FileReader();
+            fr.onload = function () {
+              var target = null;
+              for (var si = 0; si < photoSlots.length; si++) { if (!qn[photoSlots[si].key]) { target = photoSlots[si]; break; } }
+              if (!target) { alert('All 3 photo slots are full.'); return; }
+              qn[target.key] = fr.result; qn[target.thumbKey] = fr.result;
+              renderPhotoSlots(); quickSave(); renderActionPlan(); updateFloatingScore();
+            };
+            fr.readAsDataURL(f);
+          }
+          inp.value = '';
+        })();
+      });
       wrap.appendChild(ph);
       // Comment (general, separate from Action Plan) 
       var cWrap = el('div', { 'class': 'comment' });
