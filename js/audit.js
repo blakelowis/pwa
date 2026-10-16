@@ -4154,21 +4154,26 @@ function clearWorkingCopy() { if (!confirm('Clear all progress on this page? Thi
         var match = EMAIL_MAP.get(normalizeName(storeInput.value || ''));
         if (match) {
           sel.value = match;
-          var storeEmail = byId(doc, 'storeEmail');
+          var storeEmail = document.getElementById('storeEmail');
           if (storeEmail) storeEmail.value = match;
         }
         sel.addEventListener('change', function () {
           var opt = sel.options[sel.selectedIndex];
           var v = opt ? opt.text : '';
-          var n = v.split(' � ')[0] || '';
+          var n = v.split(/\s[—–-]\s/)[0] || '';
           if (n) storeInput.value = n;
-          var storeEmail = byId(doc, 'storeEmail');
-          if (storeEmail) storeEmail.value = sel.value || '';
+          var email = sel.value || '';
+          var storeEmail = document.getElementById('storeEmail');
+          if (storeEmail) storeEmail.value = email;
+          if (!storeEmail) {
+            storeEmail = document.querySelector('input[type="email"], input[name*="email" i], input[id*="email" i]');
+            if (storeEmail) storeEmail.value = email;
+          }
         });
         storeInput.addEventListener('blur', function () {
           var m = EMAIL_MAP.get(normalizeName(storeInput.value || ''));
           if (m && sel.value !== m) sel.value = m;
-          var storeEmail = byId(doc, 'storeEmail');
+          var storeEmail = document.getElementById('storeEmail');
           if (storeEmail) storeEmail.value = sel.value || '';
         });
         return sel;
